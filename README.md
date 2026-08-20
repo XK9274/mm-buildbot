@@ -18,6 +18,15 @@ dist/                   Aggregate outputs, such as all app zips together
 docs/                   Notes on package config and app-dist shape
 ```
 
+## Packages
+
+One row per package under `packages/`. Add a row here whenever a new package
+lands.
+
+| id | builds | notes |
+| --- | --- | --- |
+| `retroarch-mmiyoo-sdl2-gl` | Upstream RetroArch for Miyoo Mini, built against the `sdl2_miyoo` SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble). | `build.sh` also builds `sdl2_miyoo` itself first via the local Union toolchain checkout. See `docs/retroarch-mmiyoo-sdl2-gl.md` and `packages/retroarch-mmiyoo-sdl2-gl/README.md`. |
+
 ## Basic Flow
 
 ```text
