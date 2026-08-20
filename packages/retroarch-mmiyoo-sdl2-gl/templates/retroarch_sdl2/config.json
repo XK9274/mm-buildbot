@@ -1,0 +1,7 @@
+{
+  "label": "{{APP_NAME}}",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "RetroArch built with Miyoo SDL2, OpenGL/GLES, and Ozone"
+}
+

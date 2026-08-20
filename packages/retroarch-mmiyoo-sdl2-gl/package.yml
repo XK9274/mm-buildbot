@@ -1,0 +1,15 @@
+id: retroarch-mmiyoo-sdl2-gl
+name: RetroArch Miyoo SDL2 GL
+version: latest
+source:
+  repo: https://github.com/libretro/RetroArch.git
+  ref: master
+app_dist:
+  template: packages/retroarch-mmiyoo-sdl2-gl/templates
+  output_name: retroarch_sdl2
+tokens:
+  APP_ID: retroarch-mmiyoo-sdl2-gl
+  APP_NAME: RetroArch SDL2 GL
+  APP_DIR: retroarch_sdl2
+  LAUNCH_TARGET: retroarch
+
