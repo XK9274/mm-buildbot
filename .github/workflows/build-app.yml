@@ -1,0 +1,30 @@
+name: Build App Dist
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package id under packages/
+        required: true
+        default: retroarch-mmiyoo-sdl2-gl
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout buildbot
+        uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Build package
+        run: scripts/build-package.sh "${{ inputs.package }}"
+
+      - name: Upload app archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package }}
+          path: artifacts/${{ inputs.package }}.zip
+          if-no-files-found: error

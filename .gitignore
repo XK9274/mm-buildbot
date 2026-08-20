@@ -1,0 +1,40 @@
+artifacts/*
+!artifacts/.gitkeep
+dist/*
+!dist/.gitkeep
+work/*
+!work/.gitkeep
+
+# Local GitHub Actions runner state
+.act/
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# Logs and temp files
+*.log
+tmp/
+temp/
+
+# Common dependency/build caches used by upstream projects
+node_modules/
+.npm/
+.yarn/cache/
+.pnpm-store/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.cache/
+target/
+build/
+
