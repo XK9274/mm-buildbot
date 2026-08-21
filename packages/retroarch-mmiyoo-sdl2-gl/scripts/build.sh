@@ -319,6 +319,41 @@ build_retroarch() {
   log "Resolve diagnostic addresses with: arm-linux-gnueabihf-addr2line -f -C -e $retroarch_build/retroarch.debug <addr>"
 }
 
+# WORKAROUND, not an RA fix: upstream ships assets/xmb/monochrome/png/*.png at
+# 256x256 even though Ozone only ever displays them at ~24-46px. On this device
+# that's ~116 files x 262144 bytes = ~30MB of MI_SYS/MMA pressure at Ozone
+# startup alone, blowing the ~20.75MB budget and causing the icon-load OOM
+# storm (confirmed via caller-address diagnostics run against
+# gfx_display_reset_icon_texture / video_driver_texture_load). Shrinking the
+# staged PNGs post-copy avoids patching any RetroArch source.
+shrink_xmb_monochrome_icons() {
+  local icon_dir="$app_root/assets/xmb/monochrome/png"
+
+  if [[ ! -d "$icon_dir" ]]; then
+    return 0
+  fi
+
+  log "Workaround: shrinking $icon_dir PNGs to 64x64 (was 256x256) to fix the Ozone icon-load OOM storm"
+  python3 - "$icon_dir" <<'PY'
+import sys
+from pathlib import Path
+from PIL import Image
+
+icon_dir = Path(sys.argv[1])
+target = (64, 64)
+shrunk = 0
+for path in icon_dir.glob("*.png"):
+    with Image.open(path) as img:
+        if img.size[0] <= target[0] and img.size[1] <= target[1]:
+            continue
+        img = img.convert("RGBA")
+        img.thumbnail(target, Image.LANCZOS)
+        img.save(path)
+        shrunk += 1
+print(f"shrunk {shrunk} icon(s) in {icon_dir}")
+PY
+}
+
 stage_app_dist() {
   local toolchain="$1"
   local sdl_dir="$toolchain/workspace/sdl2_miyoo"
@@ -356,6 +391,8 @@ stage_app_dist() {
   else
     log "RetroArch assets not found; menu assets will be omitted"
   fi
+
+  shrink_xmb_monochrome_icons
 
   log "App dist staged at $app_root"
 }
