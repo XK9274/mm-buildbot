@@ -12,6 +12,11 @@ export LD_LIBRARY_PATH="$app_dir/lib:/config/lib:${LD_LIBRARY_PATH:-}"
 # export SDL_MMIYOO_GEOMETRY_QUICKPATH=
 # export SDL_MMIYOO_FRAME_TIMING=1
 
+# Only used when video_driver = "gl" in retroarch.cfg. Defaults to "pbuffer"
+# (colour-correct, offscreen-render + hardware-blit present). "windowsurface"
+# is kept for comparison only -- known colour corruption in translucent UI.
+# export SDL_MMIYOO_GLES_PRESENT_MODE=windowsurface
+
 # Stop Onion's audio server so SDL2 can open the Miyoo AO device directly.
 if [ -f /mnt/SDCARD/.tmp_update/script/stop_audioserver.sh ]; then
   /mnt/SDCARD/.tmp_update/script/stop_audioserver.sh || true
@@ -53,6 +58,7 @@ diag_log="$app_dir/logs/launch_diag.log"
 set +e
 "$app_dir/bin/{{LAUNCH_TARGET}}" \
   --config "$app_dir/cfg/retroarch.cfg" \
+  --verbose \
   --menu \
   >> "$app_dir/logs/retroarch.log" 2>&1
 ra_exit=$?
