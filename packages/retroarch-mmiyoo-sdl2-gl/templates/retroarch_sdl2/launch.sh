@@ -10,7 +10,7 @@ export LD_LIBRARY_PATH="$app_dir/lib:/config/lib:${LD_LIBRARY_PATH:-}"
 # SDL2 should auto-detect the Miyoo backend on-device. Leave SDL_MMIYOO_*
 # unset unless debugging a specific backend mode.
 # export SDL_MMIYOO_GEOMETRY_QUICKPATH=
-export SDL_MMIYOO_FRAME_TIMING=1
+# export SDL_MMIYOO_FRAME_TIMING=1
 
 # Stop Onion's audio server so SDL2 can open the Miyoo AO device directly.
 if [ -f /mnt/SDCARD/.tmp_update/script/stop_audioserver.sh ]; then
