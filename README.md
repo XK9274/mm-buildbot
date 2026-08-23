@@ -102,6 +102,17 @@ HOST_SOURCE_DIR=/path/to/blobbyvolley2 \
   scripts/build-host.sh blobbyvolley2-mmiyoo
 ```
 
+Run the resulting host executable with its required data directory:
+
+```sh
+HOST_SOURCE_DIR=/path/to/blobbyvolley2 \
+  scripts/run-host.sh blobbyvolley2-mmiyoo
+```
+
+The run helper supplies an isolated `HOME` under the host build directory by
+default. Override it with `HOST_HOME` when persistent native settings are
+needed.
+
 Host output is kept under `work/host/<package>/`. The runner checks native
 requirements with `pkg-config`, fails without installing packages, and does
 not create release archives. Host build metadata is optional and lives in the

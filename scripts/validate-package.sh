@@ -123,6 +123,16 @@ if grep -q '^host:' "$config"; then
     printf 'Host prepare script is missing or not executable in %s: %s\n' "$config" "$host_prepare_script" >&2
     exit 1
   fi
+
+  host_run_script="$(awk '
+    $1 == "host:" { in_host = 1; next }
+    in_host && /^[^ ]/ { exit }
+    in_host && $1 == "run_script:" { print $2; exit }
+  ' "$config")"
+  if [[ -n "$host_run_script" && ! -x "$root/$host_run_script" ]]; then
+    printf 'Host run script is missing or not executable in %s: %s\n' "$config" "$host_run_script" >&2
+    exit 1
+  fi
 fi
 
 printf 'Package config OK: %s\n' "$package_id"

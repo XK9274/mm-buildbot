@@ -16,6 +16,7 @@ host:
   pkg_config:
     - sdl2
   prepare_script: packages/blobbyvolley2-mmiyoo/scripts/prepare-host.sh
+  run_script: packages/blobbyvolley2-mmiyoo/scripts/run-host.sh
   configure_args:
     - -DBUILD_TESTS=OFF
   build_target: blobby

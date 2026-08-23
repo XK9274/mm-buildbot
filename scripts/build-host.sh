@@ -119,6 +119,8 @@ fi
   printf 'Resolved host source directory is missing: %s\n' "$source_dir" >&2
   exit 1
 }
+source_dir="$(CDPATH= cd -- "$source_dir" && pwd)"
+printf '%s\n' "$source_dir" > "$host_root/source-dir"
 
 while IFS= read -r module; do
   [[ -n "$module" ]] || continue
