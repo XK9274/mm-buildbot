@@ -1,0 +1,6 @@
+{
+  "label": "Blobby Volley 2",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "BV2 built against Miyoo libSDL2"
+}

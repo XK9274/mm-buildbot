@@ -1,0 +1,12 @@
+id: blobbyvolley2-mmiyoo
+name: Blobby Volley 2 for Miyoo Mini family
+version: c28c5fa87872b7592f34f5f86196e93d127b6cf9
+source:
+  repo: https://github.com/danielknobe/blobbyvolley2.git
+  ref: c28c5fa87872b7592f34f5f86196e93d127b6cf9
+depends_on:
+  - sdl2-mmiyoo-lib
+build_all: false
+app_dist:
+  template: packages/blobbyvolley2-mmiyoo/templates
+  output_name: BlobbyVolley2
