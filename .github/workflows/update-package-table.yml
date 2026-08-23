@@ -1,0 +1,44 @@
+name: Update package table image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/**/package.yml"
+      - "packages/**/templates/**/icon.png"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-package-table
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Generate package table SVG
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out package commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate SVG
+        run: python3 scripts/generate-package-table-svg.py
+
+      - name: Commit generated SVG
+        run: |
+          if git diff --quiet -- assets/package-table.svg; then
+            echo "Package table is already current"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/package-table.svg
+          git commit -m "Update generated package table"
+          git push origin HEAD:main

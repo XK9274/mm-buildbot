@@ -23,36 +23,13 @@ docs/                   Notes on package config and app-dist shape
 
 ## Packages
 
-One row per **committed** package under `packages/`. Add a row here only
-once a package has actually landed in git -- several more package recipes
-currently sit uncommitted in the working tree and are deliberately left off
-this table until they're reviewed and committed.
+The package matrix below is generated from committed manifests under
+`packages/`. It is refreshed by GitHub Actions whenever a package manifest or
+app icon is added or changed on `main`.
 
-<table>
-<colgroup>
-<col width="280">
-<col>
-<col width="90">
-<col>
-</colgroup>
-<thead>
-<tr><th>icon / id</th><th>builds</th><th>native run</th><th>notes</th></tr>
-</thead>
-<tbody>
-<tr><td>—<br><code>sdl2-mmiyoo-lib</code></td><td>Shared SDL2 library bundle (<code>libSDL2-2.0.so.0</code>, <code>libEGL.so</code>, <code>libGLESv2.so</code>, <code>libneonarmmiyoo.so</code> + headers), cloned and built from <code>sdl2_miyoo</code> via <code>mk_miyoo.sh --docker --enable-gles --clean build</code>.</td><td>—</td><td>Not an app — a shared provider consumed by other packages via <code>depends_on</code>. <code>build_all: false</code>; built on demand for whichever consumer needs it.</td></tr>
-<tr><td><img src="packages/retroarch-mmiyoo-sdl2-gl/templates/retroarch_sdl2/icon.png" alt="RetroArch icon" width="32" height="32">&nbsp;<code>retroarch-mmiyoo-sdl2-gl</code></td><td>Upstream RetroArch for Miyoo Mini, built against the shared <code>sdl2_miyoo</code> SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble).</td><td>—</td><td>Links and bundles the single <code>sdl2-mmiyoo-lib</code> provider. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code> and <code>packages/retroarch-mmiyoo-sdl2-gl/README.md</code>.</td></tr>
-<tr><td>—<br><code>i2c-tools-mmiyoo</code></td><td>Upstream <code>i2c-tools</code> 4.4 (<code>i2cdetect</code>, <code>i2cdump</code>, <code>i2cget</code>, <code>i2cset</code>, <code>i2ctransfer</code>).</td><td>—</td><td>Floating tool bundle, no <code>launch.sh</code>/app-dist shape — copy <code>bin/</code> to the device and invoke directly.</td></tr>
-<tr><td>—<br><code>strace-mmiyoo</code></td><td>Union-toolchain ARM hard-float build of <code>strace</code> 6.12.</td><td>—</td><td>Floating binary, dynamically linked against the device C library, no private shared-library deps.</td></tr>
-<tr><td>—<br><code>tcpdump-mmiyoo</code></td><td><code>tcpdump</code> 4.99.6 with its private <code>libpcap.so.1</code> dependency.</td><td>—</td><td>Floating bundle using an <code>$ORIGIN/../lib</code> runtime search path — copy <code>bin/</code> and <code>lib/</code> together.</td></tr>
-<tr><td><img src="packages/love-mmiyoo-demo/templates/LoveMiyoo/icon.png" alt="LÖVE icon" width="32" height="32">&nbsp;<code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 built against the shared <code>sdl2_miyoo</code> SDL2 backend, with a menu launcher over several test scenes.</td><td>yes</td><td><strong>Early WIP</strong> — see <code>packages/love-mmiyoo-demo/STATUS.md</code> for known bugs. <code>build_all: false</code>; its reference build helper is local-machine-only, not yet buildable in CI.</td></tr>
-<tr><td>—<br><code>sdl2-mmiyoo-addons</code></td><td>SDL2_image, SDL2_ttf, SDL2_mixer, and SDL2_net, built via <code>scripts/mksdl2.sh</code> in <code>SDL2_SKIP_CORE=1</code> mode against the <code>sdl2-mmiyoo-lib</code> provider.</td><td>—</td><td>Not an app — a shared add-on provider consumed via <code>depends_on</code>. <code>build_all: false</code>; built on demand.</td></tr>
-<tr><td>—<br><code>yorisoft-pokedex</code></td><td>Yorisoft's Retrodex Pokedex app, built against the shared <code>sdl2-mmiyoo-lib</code> and <code>sdl2-mmiyoo-addons</code> providers.</td><td>—</td><td>Links and bundles the core SDL2 provider plus the Image/TTF/Mixer add-ons. <code>build_all: false</code>.</td></tr>
-<tr><td><img src="packages/blobbyvolley2-mmiyoo/templates/BlobbyVolley2/icon.png" alt="Blobby Volley 2 icon" width="32" height="32">&nbsp;<code>blobbyvolley2-mmiyoo</code></td><td>Blobby Volley 2, built against the shared <code>sdl2-mmiyoo-lib</code> provider with PhysFS cross-built as a static library and Boost used header-only.</td><td>yes</td><td>See <code>packages/blobbyvolley2-mmiyoo/README.md</code>. <code>build_all: false</code>.</td></tr>
-</tbody>
-</table>
-
-`native run` indicates that the package declares a WSL2/Linux host build and
-run path using native system libraries.
+<p align="center">
+  <img src="assets/package-table.svg" alt="mm-buildbot package matrix">
+</p>
 
 ## Basic Flow
 
