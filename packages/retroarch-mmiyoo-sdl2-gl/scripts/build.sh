@@ -11,12 +11,11 @@ retroarch_ref="${RETROARCH_REF:-master}"
 retroarch_assets_repo="${RETROARCH_ASSETS_REPO:-https://github.com/libretro/retroarch-assets.git}"
 retroarch_assets_ref="${RETROARCH_ASSETS_REF:-master}"
 union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
-union_dir="${UNION_TOOLCHAIN_DIR:-/home/mattpc/HueTesting/union-miyoomini-toolchain}"
+union_dir="${UNION_TOOLCHAIN_DIR:-/tmp/union-miyoomini-toolchain}"
 build_swiftshader="${BUILD_SWIFTSHADER:-0}"
-build_sdl2_stubs="${BUILD_SDL2_STUBS:-0}"
 make_jobs="${MAKE_JOBS:-}"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
-libz_path="${LIBZ_PATH:-/home/mattpc/HueTesting/miyoo_sdl2_benchmarks/app-dist/sdl_bench/lib/libz.so.1}"
+libz_path="${LIBZ_PATH:-}"
 
 retroarch_src="$work_dir/src/RetroArch"
 retroarch_assets_src="$work_dir/src/retroarch-assets"
@@ -80,46 +79,6 @@ toolchain_root() {
   fi
 
   printf '%s\n' "$toolchain_work"
-}
-
-build_stub_sdl2_deps() {
-  local toolchain="$1"
-  local script="$toolchain/workspace/mksdl2.sh"
-
-  if [[ "$build_sdl2_stubs" != "1" ]]; then
-    log "Skipping legacy SDL2 stub dependency build; set BUILD_SDL2_STUBS=1 to enable it"
-    return
-  fi
-
-  if [[ ! -x "$script" ]]; then
-    log "Skipping SDL2 dependency stub build; script not found or not executable: $script"
-    return
-  fi
-
-  ensure_toolchain_image "$toolchain"
-
-  log "Building SDL2 dependency stubs in the toolchain container"
-  docker run --rm \
-    --user root \
-    -e HOME=/root \
-    --workdir /root/workspace \
-    -v "$toolchain/workspace":/root/workspace \
-    "$docker_image" \
-    bash ./mksdl2.sh
-}
-
-build_miyoo_sdl2() {
-  local toolchain="$1"
-  local script="$toolchain/workspace/sdl2_miyoo/build-scripts/mk_miyoo.sh"
-
-  if [[ ! -x "$script" ]]; then
-    printf 'Missing Miyoo SDL2 build script: %s\n' "$script" >&2
-    printf 'TODO: place this script manually until the remote toolchain has it.\n' >&2
-    exit 1
-  fi
-
-  log "Building local sdl2_miyoo with GLES enabled"
-  "$script" --docker --enable-gles
 }
 
 build_swiftshader_libs() {
@@ -234,7 +193,7 @@ fetch_retroarch_assets() {
 
 build_retroarch() {
   local toolchain="$1"
-  local sdl_dir="$toolchain/workspace/sdl2_miyoo"
+  local sdl_prefix="${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 
   if [[ -z "$make_jobs" ]]; then
     if command -v nproc >/dev/null 2>&1; then
@@ -248,6 +207,17 @@ build_retroarch() {
 
   ensure_toolchain_image "$toolchain"
 
+  if [[ -z "$libz_path" ]]; then
+    log "Locating libz.so.1 in the toolchain sysroot"
+    docker run --rm \
+      --user "$(id -u):$(id -g)" \
+      -v "$work_dir":/workspace/out \
+      "$docker_image" \
+      bash -c 'found=$(find /opt/miyoomini-toolchain -name "libz.so.1" | head -1); [ -n "$found" ] && cp -aL "$found" /workspace/out/libz.so.1'
+    libz_path="$work_dir/libz.so.1"
+    [[ -f "$libz_path" ]] || { echo "ERROR: libz.so.1 not found in toolchain sysroot" >&2; exit 1; }
+  fi
+
   log "Configuring RetroArch for SDL2, OpenGL/GLES, and Ozone in Docker"
   docker run --rm \
     --user "$(id -u):$(id -g)" \
@@ -255,14 +225,14 @@ build_retroarch() {
     -e MAKE_JOBS="$make_jobs" \
     --workdir /workspace/RetroArch \
     -v "$retroarch_src":/workspace/RetroArch \
-    -v "$sdl_dir":/workspace/sdl2_miyoo \
-    -v "$sdl_dir/include":/usr/include/SDL2:ro \
+    -v "$sdl_prefix":/opt/mmiyoo-sdl2:ro \
+    -v "$sdl_prefix/include/SDL2":/usr/include/SDL2:ro \
     "$docker_image" \
     bash -lc '
       set -euo pipefail
 
       cross_root=/opt/miyoomini-toolchain
-      sdl_dir=/workspace/sdl2_miyoo
+      sdl_dir=/opt/mmiyoo-sdl2
 
       export CROSS_COMPILE="$cross_root/bin/arm-linux-gnueabihf-"
       export CC="${CROSS_COMPILE}gcc"
@@ -273,13 +243,13 @@ build_retroarch() {
       export RANLIB="${CROSS_COMPILE}ranlib"
       export STRIP="${CROSS_COMPILE}strip"
       export PATH="$cross_root/bin:$PATH"
-      export SDL2_CONFIG="$sdl_dir/sdl2-config"
-      export PKG_CONFIG_PATH="$sdl_dir:$sdl_dir/build:$sdl_dir/build/.libs:${PKG_CONFIG_PATH:-}"
-      include_flags="-I$sdl_dir/include -I$sdl_dir/src/video/khronos -I$cross_root/arm-linux-gnueabihf/libc/usr/include"
+      export SDL2_CONFIG="$sdl_dir/bin/sdl2-config"
+      export PKG_CONFIG_PATH="$sdl_dir/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+      include_flags="-I$sdl_dir/include/SDL2 -I$sdl_dir/include -I$cross_root/arm-linux-gnueabihf/libc/usr/include"
       export CPPFLAGS="$include_flags ${CPPFLAGS:-}"
       export CFLAGS="$include_flags -Ofast -marm -mtune=cortex-a7 -march=armv7ve+simd -mfpu=neon-vfpv4 -mfloat-abi=hard -ffast-math -fomit-frame-pointer -ffunction-sections -fdata-sections ${CFLAGS:-}"
       export CXXFLAGS="-fno-exceptions -fno-rtti -std=c++11 $CFLAGS ${CXXFLAGS:-}"
-      export LDFLAGS="-L$sdl_dir/output -L$sdl_dir/build/.libs -L$sdl_dir -L$cross_root/arm-linux-gnueabihf/libc/usr/lib -Wl,-rpath-link,$sdl_dir/output -Wl,-rpath-link,$sdl_dir -Wl,--gc-sections -lEGL -lGLESv2 -lneonarmmiyoo ${LDFLAGS:-}"
+      export LDFLAGS="-L$sdl_dir/lib -L$cross_root/arm-linux-gnueabihf/libc/usr/lib -Wl,-rpath-link,$sdl_dir/lib -Wl,--gc-sections -lEGL -lGLESv2 -lneonarmmiyoo ${LDFLAGS:-}"
       export LIBS="-lSDL2 -lEGL -lGLESv2 -ldl -lrt -pthread -lm ${LIBS:-}"
 
       ./configure \
@@ -355,8 +325,7 @@ PY
 }
 
 stage_app_dist() {
-  local toolchain="$1"
-  local sdl_dir="$toolchain/workspace/sdl2_miyoo"
+  local sdl_prefix="${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 
   mkdir -p \
     "$app_root/bin" \
@@ -377,10 +346,10 @@ stage_app_dist() {
 
   install -m 755 "$retroarch_src/retroarch" "$app_root/bin/retroarch"
 
-  copy_if_exists "$sdl_dir/output/libSDL2-2.0.so.0" "$app_root/lib/"
-  copy_if_exists "$sdl_dir/libneonarmmiyoo.so" "$app_root/lib/"
-  copy_if_exists "$sdl_dir/output/libEGL.so" "$app_root/lib/"
-  copy_if_exists "$sdl_dir/output/libGLESv2.so" "$app_root/lib/"
+  copy_if_exists "$sdl_prefix/lib/libSDL2-2.0.so.0" "$app_root/lib/"
+  copy_if_exists "$sdl_prefix/lib/libneonarmmiyoo.so" "$app_root/lib/"
+  copy_if_exists "$sdl_prefix/lib/libEGL.so" "$app_root/lib/"
+  copy_if_exists "$sdl_prefix/lib/libGLESv2.so" "$app_root/lib/"
   copy_if_exists "$libz_path" "$app_root/lib/"
 
   if [[ -d "$retroarch_assets_src" ]]; then
@@ -399,12 +368,11 @@ stage_app_dist() {
 
 require_tool git
 require_tool make
+: "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 
 mkdir -p "$work_dir/src"
 toolchain="$(toolchain_root)"
 
-build_stub_sdl2_deps "$toolchain"
-build_miyoo_sdl2 "$toolchain"
 build_swiftshader_libs "$toolchain"
 fetch_retroarch
 apply_sdl2_load_texture_diagnostic

@@ -1,0 +1,13 @@
+id: sdl2-mmiyoo-lib
+name: Miyoo SDL2 Shared Libraries
+version: pending-mk-mmiyoo
+build_all: false
+# NOTE: origin/main here can lag behind local sdl2_miyoo work -- push before
+# relying on this package for anything device-tested against the latest
+# driver fixes. Revisit pinning to a tag once a stable release point exists.
+source:
+  repo: https://github.com/XK9274/sdl2_miyoo.git
+  ref: main
+artifact:
+  type: tool_bundle
+  output_name: sdl2-mmiyoo-lib

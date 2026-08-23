@@ -1,7 +1,7 @@
 # RetroArch Miyoo SDL2 GL
 
 Builds upstream RetroArch for Miyoo Mini using the Union Miyoo Mini toolchain
-and the `sdl2_miyoo` backend.
+and the shared `sdl2-mmiyoo-lib` provider built from the `sdl2_miyoo` backend.
 
 Target features:
 
@@ -18,13 +18,15 @@ Debugging scaffold:
 - `SDL_MMIYOO_GEOMETRY_QUICKPATH` - SDL2 Miyoo geometry-path debug switch.
   Behaviour notes to be filled in after device testing.
 
-The package script uses the local Union toolchain checkout by default while the
-remote `sdl2_miyoo` build scripts are being pushed.
+The package script consumes the `sdl2-mmiyoo-lib` dependency provider for
+both headers/linking and the bundled SDL2/EGL/GLES/Neon runtime.
 
 ```sh
-UNION_TOOLCHAIN_DIR=/home/mattpc/HueTesting/union-miyoomini-toolchain \
-  scripts/build-package.sh retroarch-mmiyoo-sdl2-gl
+scripts/build-package.sh retroarch-mmiyoo-sdl2-gl
 ```
+
+Override the cached Union toolchain checkout location with
+`UNION_TOOLCHAIN_DIR` if needed (defaults to `/tmp/union-miyoomini-toolchain`).
 
 Set `BUILD_SWIFTSHADER=1` to also run the SwiftShader build. That is disabled by
 default because the script documents it as a multi-hour build.

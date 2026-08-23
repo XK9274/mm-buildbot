@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+package_id="${1:?package id required}"
+repo_root="${2:?repo root required}"
+work_dir="${3:?work dir required}"
+bundle_dir="${4:?bundle dir required}"
+
+sdl_repo="${SDL2_MIYOO_REPO:-https://github.com/XK9274/sdl2_miyoo.git}"
+sdl_ref="${SDL2_MIYOO_REF:-main}"
+sdl_dir="$work_dir/src/sdl2_miyoo"
+
+log() {
+  printf '[%s] %s\n' "$package_id" "$*"
+}
+
+require_tool() {
+  command -v "$1" >/dev/null 2>&1 || {
+    printf 'Missing required tool: %s\n' "$1" >&2
+    exit 1
+  }
+}
+
+stage_headers() {
+  local source_dir="$1"
+  local destination="$2"
+
+  mkdir -p "$destination/include"
+  if [[ -d "$source_dir/include/SDL2" ]]; then
+    cp -R "$source_dir/include/SDL2" "$destination/include/"
+  elif [[ -f "$source_dir/include/SDL.h" ]]; then
+    mkdir -p "$destination/include/SDL2"
+    cp -R "$source_dir/include/." "$destination/include/SDL2/"
+  else
+    printf 'Expected SDL2 headers are missing under %s/include\n' "$source_dir" >&2
+    exit 1
+  fi
+
+  [[ -f "$source_dir/src/video/khronos/EGL/egl.h" ]] || {
+    printf 'Expected EGL development headers are missing: %s/src/video/khronos/EGL/egl.h\n' "$source_dir" >&2
+    exit 1
+  }
+  cp -R "$source_dir/src/video/khronos/." "$destination/include/"
+}
+
+mkdir -p "$work_dir/src" "$bundle_dir/bin" "$bundle_dir/lib" "$bundle_dir/include" "$bundle_dir/lib/pkgconfig"
+
+require_tool git
+if [[ ! -d "$sdl_dir/.git" ]]; then
+  log "Cloning SDL2 from $sdl_repo ($sdl_ref)"
+  git clone "$sdl_repo" "$sdl_dir"
+  git -C "$sdl_dir" checkout --detach "$sdl_ref"
+else
+  log "Updating SDL2 in $sdl_dir"
+  git -C "$sdl_dir" fetch origin "$sdl_ref"
+  git -C "$sdl_dir" checkout --force --detach FETCH_HEAD
+fi
+
+require_tool docker
+log "Building SDL2 via mk_miyoo.sh (--docker --enable-gles --clean build)"
+( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker --enable-gles --clean build )
+
+for library in libSDL2-2.0.so.0 libEGL.so libGLESv2.so; do
+  [[ -f "$sdl_dir/output/$library" ]] || {
+    printf 'Expected SDL output was not built: %s/output/%s\n' "$sdl_dir" "$library" >&2
+    exit 1
+  }
+  install -m 755 "$sdl_dir/output/$library" "$bundle_dir/lib/$library"
+done
+
+[[ -f "$sdl_dir/libneonarmmiyoo.so" ]] || {
+  printf 'Expected shared Neon helper was not built: %s/libneonarmmiyoo.so\n' "$sdl_dir" >&2
+  exit 1
+}
+install -m 755 "$sdl_dir/libneonarmmiyoo.so" "$bundle_dir/lib/libneonarmmiyoo.so"
+ln -sf libSDL2-2.0.so.0 "$bundle_dir/lib/libSDL2.so"
+
+stage_headers "$sdl_dir" "$bundle_dir"
+cat > "$bundle_dir/lib/pkgconfig/sdl2.pc" <<'EOF'
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: sdl2-mmiyoo
+Description: SDL2 MMIYOO backend
+Version: 2.0
+Libs: -L${libdir} -lSDL2 -lEGL -lGLESv2 -lneonarmmiyoo
+Cflags: -I${includedir}/SDL2 -I${includedir}
+EOF
+cat > "$bundle_dir/bin/sdl2-config" <<'EOF'
+#!/usr/bin/env sh
+prefix=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+case "${1:-}" in
+  --cflags) printf '%s\n' "-I$prefix/include/SDL2 -I$prefix/include" ;;
+  --libs) printf '%s\n' "-L$prefix/lib -lSDL2 -lEGL -lGLESv2 -lneonarmmiyoo" ;;
+  --version) printf '%s\n' '2.0' ;;
+  *) printf '%s\n' 'usage: sdl2-config [--cflags|--libs|--version]' >&2; exit 1 ;;
+esac
+EOF
+chmod 755 "$bundle_dir/bin/sdl2-config"
+if [[ -f "$sdl_dir/COPYING.txt" ]]; then
+  install -m 644 "$sdl_dir/COPYING.txt" "$bundle_dir/SDL2-COPYING.txt"
+elif [[ -f "$sdl_dir/COPYING" ]]; then
+  install -m 644 "$sdl_dir/COPYING" "$bundle_dir/SDL2-COPYING.txt"
+elif [[ -f "$sdl_dir/LICENSE" ]]; then
+  install -m 644 "$sdl_dir/LICENSE" "$bundle_dir/SDL2-COPYING.txt"
+else
+  printf 'Expected SDL license file is missing: %s/COPYING[.txt] or LICENSE\n' "$sdl_dir" >&2
+  exit 1
+fi
+install -m 644 "$repo_root/packages/sdl2-mmiyoo-lib/README.md" "$bundle_dir/README.md"
+
+log "Shared-library bundle staged at $bundle_dir"

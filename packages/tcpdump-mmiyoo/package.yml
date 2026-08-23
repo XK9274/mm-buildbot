@@ -1,0 +1,9 @@
+id: tcpdump-mmiyoo
+name: Miyoo tcpdump
+version: "4.99.6"
+source:
+  url: https://www.tcpdump.org/release/tcpdump-4.99.6.tar.xz
+  sha256: 40a8cefd45f0d2a06827e6658efb830d484868c449ad80f7efb33516af44f3da
+artifact:
+  type: tool_bundle
+  output_name: tcpdump-mmiyoo

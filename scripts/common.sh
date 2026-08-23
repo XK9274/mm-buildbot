@@ -39,6 +39,16 @@ yaml_value() {
   ' "$file"
 }
 
+package_dependencies() {
+  local file="$1"
+
+  awk '
+    $1 == "depends_on:" { in_dependencies = 1; next }
+    in_dependencies && /^[^ ]/ { exit }
+    in_dependencies && $1 == "-" { print $2 }
+  ' "$file"
+}
+
 create_zip_from_dir() {
   local source_dir="$1"
   local artifact="$2"

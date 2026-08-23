@@ -4,6 +4,8 @@ version: latest
 source:
   repo: https://github.com/libretro/RetroArch.git
   ref: master
+depends_on:
+  - sdl2-mmiyoo-lib
 app_dist:
   template: packages/retroarch-mmiyoo-sdl2-gl/templates
   output_name: retroarch_sdl2
@@ -12,4 +14,3 @@ tokens:
   APP_NAME: RetroArch SDL2 GL
   APP_DIR: retroarch_sdl2
   LAUNCH_TARGET: retroarch
-

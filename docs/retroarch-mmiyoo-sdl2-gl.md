@@ -1,7 +1,7 @@
 # RetroArch Miyoo SDL2 GL Package
 
-This package builds upstream RetroArch with the Miyoo SDL2 backend from the
-Union Miyoo Mini toolchain.
+This package builds upstream RetroArch against the shared MMIYOO SDL2 provider
+from the `sdl2_miyoo` source build.
 
 ## RetroArch Targets
 
@@ -44,8 +44,8 @@ the driver-side testing is finalised.
 
 ## TODO
 
-- Confirm the pushed Union toolchain remote contains
-  `workspace/sdl2_miyoo/build-scripts/mk_miyoo.sh`.
+- Confirm the local SDL provider bundle remains compatible with the current
+  RetroArch build flags.
 - Compare against Onion's current RetroArch build flags before the first real
   release artifact.
 - Decide whether SwiftShader should ship in the default app-dist or remain an

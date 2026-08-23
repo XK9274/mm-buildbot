@@ -1,7 +1,7 @@
 # mm-buildbot
 
-Personal build bot for producing packaged app distributions from upstream source
-repos.
+Personal build bot for producing packaged app distributions and standalone tool
+bundles from upstream source repos.
 
 This repo owns build recipes, templates, and automation. It does not own the
 upstream application source.
@@ -20,12 +20,14 @@ docs/                   Notes on package config and app-dist shape
 
 ## Packages
 
-One row per package under `packages/`. Add a row here whenever a new package
-lands.
+One row per **committed** package under `packages/`. Add a row here only
+once a package has actually landed in git -- several more package recipes
+currently sit uncommitted in the working tree and are deliberately left off
+this table until they're reviewed and committed.
 
 | id | builds | notes |
 | --- | --- | --- |
-| `retroarch-mmiyoo-sdl2-gl` | Upstream RetroArch for Miyoo Mini, built against the `sdl2_miyoo` SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble). | `build.sh` also builds `sdl2_miyoo` itself first via the local Union toolchain checkout. See `docs/retroarch-mmiyoo-sdl2-gl.md` and `packages/retroarch-mmiyoo-sdl2-gl/README.md`. |
+| `retroarch-mmiyoo-sdl2-gl` | Upstream RetroArch for Miyoo Mini, built against the shared `sdl2_miyoo` SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble). | Links and bundles the single `sdl2-mmiyoo-lib` provider. See `docs/retroarch-mmiyoo-sdl2-gl.md` and `packages/retroarch-mmiyoo-sdl2-gl/README.md`. |
 
 ## Basic Flow
 
@@ -54,11 +56,41 @@ Build a package:
 scripts/build-package.sh retroarch-mmiyoo-sdl2-gl
 ```
 
-Build every package and create `dist/all-app-dists.zip`:
+Build every package and create `dist/all-artifacts.zip` (with
+`dist/all-app-dists.zip` retained as a compatibility copy):
 
 ```sh
 scripts/build-all.sh
 ```
+
+The source-port recipes are deliberately excluded from `build-all` until each
+one has been directly built and smoke-tested against the published MMIYOO SDL2
+provider. Build one explicitly with `scripts/build-package.sh <id>`.
+
+`build-all` creates one dependency-build session and builds
+`sdl2-mmiyoo-lib` first when an enabled package consumes it. That provider is
+then reused for all SDL consumers in the session; it is not rebuilt per app.
+
+### SDL provider
+
+The SDL provider is cloned from `sdl2-mmiyoo-lib`'s `package.yml`
+`source.repo`/`ref` (currently `XK9274/sdl2_miyoo` at `main`) and built via
+`mk_miyoo.sh`, giving every consumer the same known core, EGL/GLES, Neon
+helper, and development headers. `main` can lag behind work still local to
+whichever machine last touched `sdl2_miyoo` -- push before relying on this
+for anything tested against the latest driver fixes.
+
+Override the source explicitly when required:
+
+```sh
+SDL2_MIYOO_REPO=https://github.com/you/sdl2_miyoo.git \
+SDL2_MIYOO_REF=your-branch \
+scripts/build-all.sh
+```
+
+`build-all` builds the currently enabled recipes only. Disabled source-port
+recipes remain individually opt-in until their upstream package layouts have
+been verified.
 
 ## Local GitHub Actions Testing
 
