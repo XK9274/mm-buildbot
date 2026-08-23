@@ -1,0 +1,6 @@
+{
+  "label": "Konpacto",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "Portable FM macro tracker running on the MMIYOO SDL2 backend"
+}

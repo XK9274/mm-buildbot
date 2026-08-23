@@ -1,0 +1,4 @@
+44100 -SAMPLE RATE
+1024 -BUFFER SIZE
+K1bit.png -THEME
+amateur.bmp -FONT

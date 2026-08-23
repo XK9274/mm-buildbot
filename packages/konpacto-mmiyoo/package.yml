@@ -1,0 +1,26 @@
+id: konpacto-mmiyoo
+name: Konpacto FM Macro Tracker
+modified_source: yes
+version: 2d196a918bcd8311f57b46e75d60a390f0464701
+source:
+  repo: https://github.com/wapordev/konpacto.git
+  ref: 2d196a918bcd8311f57b46e75d60a390f0464701
+depends_on:
+  - sdl2-mmiyoo-lib
+  - sdl2-mmiyoo-addons
+build_all: false
+host:
+  build_system: make
+  source_dir: .
+  pkg_config:
+    - sdl2
+    - SDL2_image
+    - SDL2_mixer
+  prepare_script: packages/konpacto-mmiyoo/scripts/prepare-host.sh
+  post_build_script: packages/konpacto-mmiyoo/scripts/post-build-host.sh
+  run_script: packages/konpacto-mmiyoo/scripts/run-host.sh
+  outputs:
+    - bin/konpacto
+app_dist:
+  template: packages/konpacto-mmiyoo/templates
+  output_name: Konpacto

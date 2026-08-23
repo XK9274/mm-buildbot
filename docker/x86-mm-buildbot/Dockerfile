@@ -23,6 +23,8 @@ RUN apt-get update \
         libopenal-dev \
         libpulse-dev \
         libsdl2-dev \
+        libsdl2-image-dev \
+        libsdl2-mixer-dev \
         libtheora-dev \
         libvorbis-dev \
         libwayland-dev \
