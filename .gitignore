@@ -38,3 +38,5 @@ __pycache__/
 target/
 build/
 
+# Local planning and generated documentation
+docs/
