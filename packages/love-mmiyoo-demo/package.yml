@@ -7,6 +7,23 @@ source:
   ref: f834ab72481e95fa90abf573643c8dd168ae0660
 depends_on:
   - sdl2-mmiyoo-lib
+host:
+  build_system: make
+  source_dir: .
+  pkg_config:
+    - sdl2
+    - freetype2
+    - zlib
+    - openal
+    - vorbisfile
+    - theoradec
+    - libmodplug
+    - libmpg123
+  prepare_script: packages/love-mmiyoo-demo/scripts/prepare-host.sh
+  post_build_script: packages/love-mmiyoo-demo/scripts/post-build-host.sh
+  run_script: packages/love-mmiyoo-demo/scripts/run-host.sh
+  outputs:
+    - bin/love
 app_dist:
   template: packages/love-mmiyoo-demo/templates
   output_name: LoveMiyoo

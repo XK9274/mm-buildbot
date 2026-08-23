@@ -167,6 +167,11 @@ case "$build_system" in
     ;;
 esac
 
+post_build_script="$(host_value post_build_script)"
+if [[ -n "$post_build_script" ]]; then
+  "$root/$post_build_script" "$package_id" "$root" "$source_dir" "$host_root"
+fi
+
 while IFS= read -r output; do
   [[ -n "$output" ]] || continue
   output_path="$host_root/$output"

@@ -29,9 +29,18 @@ yaml_value() {
   local file="$1"
   local key="$2"
 
-  awk -F ': *' -v key="$key" '
-    $1 == key {
-      value = $2
+  awk -v key="$key" '
+    {
+      separator = index($0, ":")
+      if (separator == 0) {
+        next
+      }
+      field = substr($0, 1, separator - 1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", field)
+    }
+    field == key {
+      value = substr($0, separator + 1)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
       gsub(/^"|"$/, "", value)
       print value
       exit

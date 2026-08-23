@@ -1,0 +1,9 @@
+.git
+.act
+artifacts
+dist
+work
+tmp
+temp
+node_modules
+*.log

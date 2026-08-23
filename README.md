@@ -118,6 +118,21 @@ requirements with `pkg-config`, fails without installing packages, and does
 not create release archives. Host build metadata is optional and lives in the
 package manifest's `host:` section.
 
+For a reproducible native environment, use the supplied `x86-mm-buildbot`
+container. It includes the compiler, Autotools, system SDL2, and the native
+audio/video development libraries. The repository is mounted into the
+container, so build output remains under the normal `work/host/` directory:
+
+```sh
+scripts/build-host-docker.sh build love-mmiyoo-demo
+scripts/build-host-docker.sh run love-mmiyoo-demo
+scripts/build-host-docker.sh shell
+```
+
+The `run` command forwards the WSLg/X11 video socket and WSLg PulseAudio
+socket when available. The image name can be overridden with
+`MM_X86_BUILDBOT_IMAGE`.
+
 ### SDL provider
 
 The SDL provider is cloned from `sdl2-mmiyoo-lib`'s `package.yml`

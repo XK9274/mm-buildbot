@@ -61,3 +61,18 @@ are adapted from [messersm/love2d-demos](https://github.com/messersm/love2d-demo
 rendering. `lib/bump.lua` is [kikito/bump.lua](https://github.com/kikito/bump.lua)
 v3.1.7, MIT licensed, copyright (c) 2012 Enrique García Cota, vendored
 unmodified for `circle_squares.lua`'s collision detection.
+
+## WSL2 host test
+
+The package also declares a native host build that uses system SDL2, freetype,
+and zlib, plus the native OpenAL/Vorbis/Theora/ModPlug/mpg123 development
+libraries for the full audio/video backend. It bootstraps LuaJIT privately
+when a system LuaJIT development package is unavailable:
+
+```sh
+scripts/build-host.sh love-mmiyoo-demo
+scripts/run-host.sh love-mmiyoo-demo
+```
+
+The host build follows the same manifest-driven pattern as the other native
+host packages.
