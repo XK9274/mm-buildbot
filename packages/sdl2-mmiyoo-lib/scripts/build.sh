@@ -90,7 +90,7 @@ includedir=${prefix}/include
 
 Name: sdl2-mmiyoo
 Description: SDL2 MMIYOO backend
-Version: 2.0
+Version: 2.0.0
 Libs: -L${libdir} -lSDL2 -lEGL -lGLESv2 -lneonarmmiyoo
 Cflags: -I${includedir}/SDL2 -I${includedir}
 EOF

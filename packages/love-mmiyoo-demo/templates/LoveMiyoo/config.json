@@ -1,0 +1,6 @@
+{
+  "label": "LÖVE SDL2 Demo",
+  "icon": "icon.png",
+  "launch": "launch.sh",
+  "description": "LÖVE 11.5 running on the MMIYOO SDL2 backend"
+}
