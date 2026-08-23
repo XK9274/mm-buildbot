@@ -9,7 +9,7 @@ app_dist_dir="${4:?app-dist dir required}"
 love_repo="${LOVE_REPO:-https://github.com/love2d/love.git}"
 love_ref="${LOVE_REF:-f834ab72481e95fa90abf573643c8dd168ae0660}"
 union_dir="${UNION_TOOLCHAIN_DIR:-/home/mattpc/HueTesting/union-miyoomini-toolchain}"
-reference_dir="${LOVE_REFERENCE_BUILD_DIR:-$union_dir/workspace/love}"
+package_dir="$repo_root/packages/love-mmiyoo-demo"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 love_image="${MIYOO_LOVE_IMAGE:-${docker_image}-love-build-v1}"
 love_src="$work_dir/src/love"
@@ -71,11 +71,7 @@ verify_runtime_closure() {
 
 require_tool git
 require_tool arm-linux-gnueabihf-readelf
-[[ -x "$reference_dir/build_love.sh" ]] || {
-  printf 'Missing reference LÖVE builder under %s (need build_love.sh)\n' "$reference_dir" >&2
-  exit 1
-}
- : "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
+: "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 [[ -d "$MMIYOO_SDL2_PREFIX/include/SDL2" ]] || {
   printf 'SDL provider does not expose headers at %s/include/SDL2\n' "$MMIYOO_SDL2_PREFIX" >&2
   exit 1
@@ -87,15 +83,11 @@ git clone --depth=1 "$love_repo" "$love_src"
 git -C "$love_src" fetch --depth=1 origin "$love_ref"
 git -C "$love_src" checkout --detach FETCH_HEAD
 
-# Reuse the established dependency builder, but replace its SDL hook with a
-# provider installer. No second SDL2 implementation is compiled here.
-install -m 755 "$reference_dir/build_love.sh" "$love_src/build_love.sh"
-[[ -f "$reference_dir/cross.cmake" ]] || {
-  printf 'Missing reference CMake toolchain file: %s/cross.cmake\n' "$reference_dir" >&2
-  exit 1
-}
-install -m 644 "$reference_dir/cross.cmake" "$love_src/cross.cmake"
-install -m 644 "$repo_root/packages/love-mmiyoo-demo/sdl2.m4" "$love_src/sdl2.m4"
+# Vendored dependency builder, replacing its SDL hook with a provider
+# installer below. No second SDL2 implementation is compiled here.
+install -m 755 "$package_dir/build_love.sh" "$love_src/build_love.sh"
+install -m 644 "$package_dir/cross.cmake" "$love_src/cross.cmake"
+install -m 644 "$package_dir/sdl2.m4" "$love_src/sdl2.m4"
 cat > "$love_src/mksdl2.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

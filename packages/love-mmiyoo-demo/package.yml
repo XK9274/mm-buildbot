@@ -1,9 +1,7 @@
 id: love-mmiyoo-demo
 name: LÖVE Miyoo SDL2/GLES Demo
 version: 11.5
-# Opt-in only until smoke-tested under CI/act -- the reference LOVE build
-# helper (LOVE_REFERENCE_BUILD_DIR) is a local-machine-only dependency today.
-build_all: false
+build_all: true
 source:
   repo: https://github.com/love2d/love.git
   ref: f834ab72481e95fa90abf573643c8dd168ae0660

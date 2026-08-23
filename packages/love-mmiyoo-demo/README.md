@@ -1,10 +1,10 @@
 # LÖVE Miyoo SDL2 demo
 
-This recipe clones the official pinned LÖVE 11.5 source revision, then runs the
-existing known-good `workspace/love/build_love.sh` dependency builder in the
-Union toolchain. Its copied `mksdl2.sh` hook is replaced with an adapter that
-installs the shared buildbot MMIYOO SDL2 provider into the temporary toolchain
-sysroot before LÖVE is configured; it never compiles a second SDL2.
+This recipe clones the official pinned LÖVE 11.5 source revision, then runs
+`build_love.sh` (vendored alongside this README, along with `cross.cmake`)
+inside the Union toolchain. Its `mksdl2.sh` hook is replaced with an adapter
+that installs the shared buildbot MMIYOO SDL2 provider into the temporary
+toolchain sysroot before LÖVE is configured; it never compiles a second SDL2.
 
 The output is a normal Onion-style `LoveMiyoo/` app distribution containing:
 
@@ -18,14 +18,6 @@ The output is a normal Onion-style `LoveMiyoo/` app distribution containing:
   `lib/bump.lua`), and a procedural rain/lightning scene. Plain
   `love.graphics` primitives throughout, no custom shaders. SDL2 gamepad
   input quits on the Menu or Select button (see below).
-
-It is deliberately excluded from `build-all` until it's been smoke-tested under
-CI/`act`. Its reference `build_love.sh`/`mksdl2.sh`/`cross.cmake` helper scripts
-currently exist only on one dev machine's disk (untracked in the `XK9274/love`
-fork they live alongside), so this package cannot yet build from a fresh clone
-or in CI -- vendoring those scripts, or committing them upstream, is tracked as
-a follow-up. A direct build fails before making changes if the helper is
-absent. Override its location with `LOVE_REFERENCE_BUILD_DIR`.
 
 ## Input
 
