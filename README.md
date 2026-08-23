@@ -35,6 +35,7 @@ this table until they're reviewed and committed.
 | `i2c-tools-mmiyoo` | Upstream `i2c-tools` 4.4 (`i2cdetect`, `i2cdump`, `i2cget`, `i2cset`, `i2ctransfer`). | Floating tool bundle, no `launch.sh`/app-dist shape -- copy `bin/` to the device and invoke directly. |
 | `strace-mmiyoo` | Union-toolchain ARM hard-float build of `strace` 6.12. | Floating binary, dynamically linked against the device C library, no private shared-library deps. |
 | `tcpdump-mmiyoo` | `tcpdump` 4.99.6 with its private `libpcap.so.1` dependency. | Floating bundle using an `$ORIGIN/../lib` runtime search path -- copy `bin/` and `lib/` together. |
+| `love-mmiyoo-demo` | LÖVE 11.5 built against the shared `sdl2_miyoo` SDL2 backend, with a menu launcher over several test scenes. | **Early WIP** -- see `packages/love-mmiyoo-demo/STATUS.md` for known bugs. `build_all: false`; its reference build helper is local-machine-only, not yet buildable in CI. |
 
 ## Basic Flow
 
