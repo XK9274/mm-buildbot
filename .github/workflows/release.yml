@@ -27,6 +27,7 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       target_sha: ${{ steps.version.outputs.target_sha }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
       prerelease: ${{ steps.version.outputs.prerelease }}
 
     steps:
@@ -68,10 +69,12 @@ jobs:
 
           PRERELEASE=false
           [[ "$TAG" == *-* ]] && PRERELEASE=true
+          SHORT_SHA=$(git rev-parse --short "$TARGET_SHA")
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
-          echo "Resolved $TAG at $TARGET_SHA (prerelease=$PRERELEASE)"
+          echo "Resolved $TAG at $TARGET_SHA ($SHORT_SHA, prerelease=$PRERELEASE)"
 
       - name: Check release target and duplicates
         if: ${{ !inputs.dry_run }}
@@ -185,7 +188,7 @@ jobs:
             echo '```'
             echo ""
             echo "### Build info"
-            echo "- Commit: ${{ needs.preflight.outputs.target_sha }}"
+            echo "- Commit: ${{ needs.preflight.outputs.short_sha }} (\`${{ needs.preflight.outputs.target_sha }}\`)"
           } > release-notes.md
           cat release-notes.md
 
