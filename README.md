@@ -82,6 +82,31 @@ provider. Build one explicitly with `scripts/build-package.sh <id>`.
 `sdl2-mmiyoo-lib` first when an enabled package consumes it. That provider is
 then reused for all SDL consumers in the session; it is not rebuilt per app.
 
+### WSL2 native host builds
+
+Host builds compile selected packages with the WSL2-native compiler and the
+system SDL2 installation. They do not use the Miyoo ARM toolchain,
+`sdl2-mmiyoo-lib`, Docker, or app-distribution packaging.
+
+The first host-enabled package is Blobby Volley 2:
+
+```sh
+scripts/build-host.sh blobbyvolley2-mmiyoo
+```
+
+Use `HOST_SOURCE_DIR` to build an editable local checkout while keeping the
+build directory separate from the source tree:
+
+```sh
+HOST_SOURCE_DIR=/path/to/blobbyvolley2 \
+  scripts/build-host.sh blobbyvolley2-mmiyoo
+```
+
+Host output is kept under `work/host/<package>/`. The runner checks native
+requirements with `pkg-config`, fails without installing packages, and does
+not create release archives. Host build metadata is optional and lives in the
+package manifest's `host:` section.
+
 ### SDL provider
 
 The SDL provider is cloned from `sdl2-mmiyoo-lib`'s `package.yml`

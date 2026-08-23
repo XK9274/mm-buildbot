@@ -78,4 +78,51 @@ if [[ "$declared_id" != "$package_id" ]]; then
   exit 1
 fi
 
+if grep -q '^host:' "$config"; then
+  host_build_system="$(awk '
+    $1 == "host:" { in_host = 1; next }
+    in_host && /^[^ ]/ { exit }
+    in_host && $1 == "build_system:" { print $2; exit }
+  ' "$config")"
+  case "$host_build_system" in
+    cmake|make) ;;
+    *)
+      printf 'Unsupported host.build_system in %s: %s\n' "$config" "${host_build_system:-<missing>}" >&2
+      exit 1
+      ;;
+  esac
+
+  host_source_dir="$(awk '
+    $1 == "host:" { in_host = 1; next }
+    in_host && /^[^ ]/ { exit }
+    in_host && $1 == "source_dir:" { print $2; exit }
+  ' "$config")"
+  [[ -n "$host_source_dir" ]] || {
+    printf 'Missing host.source_dir in %s\n' "$config" >&2
+    exit 1
+  }
+
+  host_outputs="$(awk '
+    $1 == "host:" { in_host = 1; next }
+    in_host && /^[^ ]/ { exit }
+    in_host && $1 == "outputs:" { in_outputs = 1; next }
+    in_outputs && /^[^ ]/ { exit }
+    in_outputs && $1 == "-" { print $2 }
+  ' "$config")"
+  [[ -n "$host_outputs" ]] || {
+    printf 'Missing host.outputs in %s\n' "$config" >&2
+    exit 1
+  }
+
+  host_prepare_script="$(awk '
+    $1 == "host:" { in_host = 1; next }
+    in_host && /^[^ ]/ { exit }
+    in_host && $1 == "prepare_script:" { print $2; exit }
+  ' "$config")"
+  if [[ -n "$host_prepare_script" && ! -x "$root/$host_prepare_script" ]]; then
+    printf 'Host prepare script is missing or not executable in %s: %s\n' "$config" "$host_prepare_script" >&2
+    exit 1
+  fi
+fi
+
 printf 'Package config OK: %s\n' "$package_id"

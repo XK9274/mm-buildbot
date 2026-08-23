@@ -10,3 +10,14 @@ build_all: false
 app_dist:
   template: packages/blobbyvolley2-mmiyoo/templates
   output_name: BlobbyVolley2
+host:
+  build_system: cmake
+  source_dir: .
+  pkg_config:
+    - sdl2
+  prepare_script: packages/blobbyvolley2-mmiyoo/scripts/prepare-host.sh
+  configure_args:
+    - -DBUILD_TESTS=OFF
+  build_target: blobby
+  outputs:
+    - build/src/blobby
