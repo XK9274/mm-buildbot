@@ -60,12 +60,18 @@ require_tool docker
 log "Building SDL2 via mk_miyoo.sh (--docker --enable-gles --clean build)"
 ( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker --enable-gles --clean build )
 
-for library in libSDL2-2.0.so.0 libEGL.so libGLESv2.so; do
-  [[ -f "$sdl_dir/output/$library" ]] || {
-    printf 'Expected SDL output was not built: %s/output/%s\n' "$sdl_dir" "$library" >&2
+[[ -f "$sdl_dir/output/libSDL2-2.0.so.0" ]] || {
+  printf 'Expected SDL output was not built: %s/output/libSDL2-2.0.so.0\n' "$sdl_dir" >&2
+  exit 1
+}
+install -m 755 "$sdl_dir/output/libSDL2-2.0.so.0" "$bundle_dir/lib/libSDL2-2.0.so.0"
+
+for library in libEGL.so libGLESv2.so; do
+  [[ -f "$sdl_dir/$library" ]] || {
+    printf 'Expected vendored EGL/GLES library is missing: %s/%s\n' "$sdl_dir" "$library" >&2
     exit 1
   }
-  install -m 755 "$sdl_dir/output/$library" "$bundle_dir/lib/$library"
+  install -m 755 "$sdl_dir/$library" "$bundle_dir/lib/$library"
 done
 
 [[ -f "$sdl_dir/libneonarmmiyoo.so" ]] || {

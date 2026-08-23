@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install packaging tools
-        run: sudo apt-get update && sudo apt-get install -y zip
+        run: sudo apt-get update && sudo apt-get install -y zip python3-pil
 
       - name: Build package
         run: scripts/build-package.sh "${{ inputs.package }}"

@@ -1,0 +1,212 @@
+name: Release mm-buildbot packages
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (first release: v0.1.0). Blank bumps PATCH after the first release."
+        required: false
+        type: string
+      dry_run:
+        description: "Build and package without checking or publishing a GitHub Release (for act)."
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    name: Pre-release checks
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      target_sha: ${{ steps.version.outputs.target_sha }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag
+        id: version
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          TRIGGER_TAG: ${{ github.ref_name }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "$REQUESTED_TAG" ]]; then
+            TAG="$REQUESTED_TAG"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            LATEST_TAG=$(git tag --list 'v*' --sort=-v:refname | grep -m1 -E '^v[0-9]+\.[0-9]+\.[0-9]+$' || true)
+            if [[ -z "$LATEST_TAG" ]]; then
+              echo "No three-part release tag exists yet. Enter v0.1.0 explicitly for the first release."
+              exit 1
+            fi
+            VER="${LATEST_TAG#v}"
+            MAJOR="${VER%%.*}"
+            REST="${VER#*.}"
+            MINOR="${REST%%.*}"
+            PATCH="${REST#*.}"
+            TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+            echo "No tag given -- auto-bumping latest release $LATEST_TAG -> $TAG"
+          else
+            TAG="$TRIGGER_TAG"
+          fi
+
+          if ! echo "$TAG" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$'; then
+            echo "Tag '$TAG' does not match vMAJOR.MINOR.PATCH or vMAJOR.MINOR.PATCH-prerelease format"
+            exit 1
+          fi
+
+          PRERELEASE=false
+          [[ "$TAG" == *-* ]] && PRERELEASE=true
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Resolved $TAG at $TARGET_SHA (prerelease=$PRERELEASE)"
+
+      - name: Check release target and duplicates
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          TARGET_SHA="${{ steps.version.outputs.target_sha }}"
+          if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
+            TAG_SHA=$(git rev-list -n1 "$TAG")
+            if [[ "$TAG_SHA" != "$TARGET_SHA" ]]; then
+              echo "Tag '$TAG' points to $TAG_SHA, not release commit $TARGET_SHA"
+              exit 1
+            fi
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release '$TAG' already exists — bump the version"
+            exit 1
+          fi
+
+  build:
+    name: Build all packages
+    needs: preflight
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout local dry run
+        if: ${{ inputs.dry_run }}
+        uses: actions/checkout@v4
+
+      - name: Checkout release commit
+        if: ${{ !inputs.dry_run }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.target_sha }}
+          fetch-depth: 0
+
+      - name: Verify local dry-run commit
+        if: ${{ inputs.dry_run }}
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ needs.preflight.outputs.target_sha }}"
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y zip python3-pil
+
+      - name: Build all enabled packages
+        run: scripts/build-all.sh
+
+      - name: Verify build artifacts
+        run: |
+          ls -la artifacts/ dist/
+          compgen -G "artifacts/*.zip" >/dev/null || { echo "ERROR: no package artifacts produced"; exit 1; }
+          [ -f dist/all-artifacts.zip ] || { echo "ERROR: aggregate artifact missing"; exit 1; }
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          cp ../dist/all-artifacts.zip .
+          sha256sum *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload release bundle
+        if: ${{ !inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-bundle-${{ needs.preflight.outputs.tag }}
+          path: |
+            artifacts/*.zip
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: [preflight, build]
+    if: ${{ !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.target_sha }}
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle-${{ needs.preflight.outputs.tag }}
+          path: output
+
+      - name: Build release notes
+        id: notes
+        run: |
+          {
+            echo "## mm-buildbot packages — ${{ needs.preflight.outputs.tag }}"
+            echo ""
+            echo "| Package | Description |"
+            echo "|---|---|"
+            for zip in output/*.zip; do
+              base="$(basename "$zip" .zip)"
+              [[ "$base" == "all-artifacts" ]] && continue
+              name="$(awk -F': *' '$1=="name"{print $2; exit}' "packages/$base/package.yml" 2>/dev/null)"
+              echo "| \`$base.zip\` | ${name:-$base} |"
+            done
+            echo "| \`all-artifacts.zip\` | Every package above, bundled together |"
+            echo ""
+            echo "### Verify"
+            echo '```sh'
+            echo "sha256sum -c SHA256SUMS.txt"
+            echo '```'
+            echo ""
+            echo "### Build info"
+            echo "- Commit: ${{ needs.preflight.outputs.target_sha }}"
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG="${{ needs.preflight.outputs.tag }}"
+          TARGET_SHA="${{ needs.preflight.outputs.target_sha }}"
+          PRERELEASE="${{ needs.preflight.outputs.prerelease }}"
+
+          RELEASE_FLAGS=()
+          if [[ "$PRERELEASE" == "true" ]]; then
+            RELEASE_FLAGS+=(--prerelease)
+          fi
+
+          gh release create "$TAG" \
+            output/*.zip \
+            output/SHA256SUMS.txt \
+            --target "$TARGET_SHA" \
+            "${RELEASE_FLAGS[@]}" \
+            --title "mm-buildbot packages $TAG" \
+            --notes-file release-notes.md

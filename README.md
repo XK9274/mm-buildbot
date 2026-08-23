@@ -6,6 +6,9 @@ bundles from upstream source repos.
 This repo owns build recipes, templates, and automation. It does not own the
 upstream application source.
 
+> **AI disclosure:** there's been a substantial usage of various LLM in this
+> project to both write the code & maintain the repo itself.
+
 ## Layout
 
 ```text
@@ -27,7 +30,11 @@ this table until they're reviewed and committed.
 
 | id | builds | notes |
 | --- | --- | --- |
+| `sdl2-mmiyoo-lib` | Shared SDL2 library bundle (`libSDL2-2.0.so.0`, `libEGL.so`, `libGLESv2.so`, `libneonarmmiyoo.so` + headers), cloned and built from `sdl2_miyoo` via `mk_miyoo.sh --docker --enable-gles --clean build`. | Not an app -- a shared provider consumed by other packages via `depends_on`. `build_all: false`; built on demand for whichever consumer needs it. |
 | `retroarch-mmiyoo-sdl2-gl` | Upstream RetroArch for Miyoo Mini, built against the shared `sdl2_miyoo` SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble). | Links and bundles the single `sdl2-mmiyoo-lib` provider. See `docs/retroarch-mmiyoo-sdl2-gl.md` and `packages/retroarch-mmiyoo-sdl2-gl/README.md`. |
+| `i2c-tools-mmiyoo` | Upstream `i2c-tools` 4.4 (`i2cdetect`, `i2cdump`, `i2cget`, `i2cset`, `i2ctransfer`). | Floating tool bundle, no `launch.sh`/app-dist shape -- copy `bin/` to the device and invoke directly. |
+| `strace-mmiyoo` | Union-toolchain ARM hard-float build of `strace` 6.12. | Floating binary, dynamically linked against the device C library, no private shared-library deps. |
+| `tcpdump-mmiyoo` | `tcpdump` 4.99.6 with its private `libpcap.so.1` dependency. | Floating bundle using an `$ORIGIN/../lib` runtime search path -- copy `bin/` and `lib/` together. |
 
 ## Basic Flow
 
