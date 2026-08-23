@@ -36,6 +36,8 @@ this table until they're reviewed and committed.
 | `strace-mmiyoo` | Union-toolchain ARM hard-float build of `strace` 6.12. | Floating binary, dynamically linked against the device C library, no private shared-library deps. |
 | `tcpdump-mmiyoo` | `tcpdump` 4.99.6 with its private `libpcap.so.1` dependency. | Floating bundle using an `$ORIGIN/../lib` runtime search path -- copy `bin/` and `lib/` together. |
 | `love-mmiyoo-demo` | LÖVE 11.5 built against the shared `sdl2_miyoo` SDL2 backend, with a menu launcher over several test scenes. | **Early WIP** -- see `packages/love-mmiyoo-demo/STATUS.md` for known bugs. `build_all: false`; its reference build helper is local-machine-only, not yet buildable in CI. |
+| `sdl2-mmiyoo-addons` | SDL2_image, SDL2_ttf, SDL2_mixer, and SDL2_net, built via `scripts/mksdl2.sh` in `SDL2_SKIP_CORE=1` mode against the `sdl2-mmiyoo-lib` provider. | Not an app -- a shared add-on provider consumed via `depends_on`. `build_all: false`; built on demand. |
+| `yorisoft-pokedex` | Yorisoft's Retrodex Pokedex app, built against the shared `sdl2-mmiyoo-lib` and `sdl2-mmiyoo-addons` providers. | Links and bundles the core SDL2 provider plus the Image/TTF/Mixer add-ons. `build_all: false`. |
 
 ## Basic Flow
 

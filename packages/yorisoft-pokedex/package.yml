@@ -1,0 +1,13 @@
+id: yorisoft-pokedex
+name: Yorisoft Retrodex Pokedex
+version: 7e998b923738d3b00e3a2867c8aa29c4b7b1d06a
+source:
+  repo: https://github.com/Yorisoft/pokedex_miyoo.git
+  ref: 7e998b923738d3b00e3a2867c8aa29c4b7b1d06a
+depends_on:
+  - sdl2-mmiyoo-lib
+  - sdl2-mmiyoo-addons
+build_all: false
+app_dist:
+  template: packages/yorisoft-pokedex/templates
+  output_name: Retrodex
