@@ -45,8 +45,17 @@ copy_soname_library() {
   local source="$1"
   local destination="$2"
   local soname
-  soname="$(arm-linux-gnueabihf-readelf -d "$source" 2>/dev/null | awk -F'[][]' '/SONAME/ { print $2; exit }')"
+  soname="$(toolchain_readelf "$source" -d 2>/dev/null | awk -F'[][]' '/SONAME/ { print $2; exit }')"
   install -m 755 "$source" "$destination/${soname:-$(basename "$source")}" 
+}
+
+toolchain_readelf() {
+  local target="$1"
+  shift
+  docker run --rm --user "$(id -u):$(id -g)" \
+    -v "$target":/work/input:ro \
+    "$docker_image" \
+    /opt/miyoomini-toolchain/usr/bin/arm-linux-gnueabihf-readelf "$@" /work/input
 }
 
 is_platform_library() {
@@ -65,12 +74,12 @@ verify_runtime_closure() {
         printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
         exit 1
       fi
-    done < <(arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
+    done < <(toolchain_readelf "$target" -d 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
   done < <(find "$app_root" -type f -perm -0100 -print0; find "$app_root/lib" -type f -name '*.so*' -print0)
 }
 
 require_tool git
-require_tool arm-linux-gnueabihf-readelf
+require_tool docker
 : "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 [[ -d "$MMIYOO_SDL2_PREFIX/include/SDL2" ]] || {
   printf 'SDL provider does not expose headers at %s/include/SDL2\n' "$MMIYOO_SDL2_PREFIX" >&2
