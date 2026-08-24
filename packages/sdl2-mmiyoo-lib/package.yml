@@ -1,5 +1,6 @@
 id: sdl2-mmiyoo-lib
 name: Miyoo SDL2 Shared Libraries
+modified_source: no
 version: pending-mk-mmiyoo
 build_all: false
 # NOTE: origin/main here can lag behind local sdl2_miyoo work -- push before

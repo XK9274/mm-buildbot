@@ -9,6 +9,7 @@ bundle_dir="${4:?bundle dir required}"
 sdl_repo="${SDL2_MIYOO_REPO:-https://github.com/XK9274/sdl2_miyoo.git}"
 sdl_ref="${SDL2_MIYOO_REF:-main}"
 sdl_dir="$work_dir/src/sdl2_miyoo"
+enable_gles="${SDL2_MIYOO_ENABLE_GLES:-1}"
 
 log() {
   printf '[%s] %s\n' "$package_id" "$*"
@@ -56,9 +57,12 @@ else
   git -C "$sdl_dir" checkout --force --detach FETCH_HEAD
 fi
 
+gles_flag=""
+[[ "$enable_gles" == "1" ]] && gles_flag="--enable-gles"
+
 require_tool docker
-log "Building SDL2 via mk_miyoo.sh (--docker --enable-gles --clean build)"
-( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker --enable-gles --clean build )
+log "Building SDL2 via mk_miyoo.sh (--docker $gles_flag --clean build)"
+( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker $gles_flag --clean build )
 
 [[ -f "$sdl_dir/output/libSDL2-2.0.so.0" ]] || {
   printf 'Expected SDL output was not built: %s/output/libSDL2-2.0.so.0\n' "$sdl_dir" >&2
@@ -66,13 +70,15 @@ log "Building SDL2 via mk_miyoo.sh (--docker --enable-gles --clean build)"
 }
 install -m 755 "$sdl_dir/output/libSDL2-2.0.so.0" "$bundle_dir/lib/libSDL2-2.0.so.0"
 
-for library in libEGL.so libGLESv2.so; do
-  [[ -f "$sdl_dir/$library" ]] || {
-    printf 'Expected vendored EGL/GLES library is missing: %s/%s\n' "$sdl_dir" "$library" >&2
-    exit 1
-  }
-  install -m 755 "$sdl_dir/$library" "$bundle_dir/lib/$library"
-done
+if [[ "$enable_gles" == "1" ]]; then
+  for library in libEGL.so libGLESv2.so; do
+    [[ -f "$sdl_dir/$library" ]] || {
+      printf 'Expected vendored EGL/GLES library is missing: %s/%s\n' "$sdl_dir" "$library" >&2
+      exit 1
+    }
+    install -m 755 "$sdl_dir/$library" "$bundle_dir/lib/$library"
+  done
+fi
 
 [[ -f "$sdl_dir/libneonarmmiyoo.so" ]] || {
   printf 'Expected shared Neon helper was not built: %s/libneonarmmiyoo.so\n' "$sdl_dir" >&2
@@ -82,24 +88,28 @@ install -m 755 "$sdl_dir/libneonarmmiyoo.so" "$bundle_dir/lib/libneonarmmiyoo.so
 ln -sf libSDL2-2.0.so.0 "$bundle_dir/lib/libSDL2.so"
 
 stage_headers "$sdl_dir" "$bundle_dir"
-cat > "$bundle_dir/lib/pkgconfig/sdl2.pc" <<'EOF'
-prefix=${pcfiledir}/../..
-exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+
+gl_libs=""
+[[ "$enable_gles" == "1" ]] && gl_libs="-lEGL -lGLESv2 "
+
+cat > "$bundle_dir/lib/pkgconfig/sdl2.pc" <<EOF
+prefix=\${pcfiledir}/../..
+exec_prefix=\${prefix}
+libdir=\${exec_prefix}/lib
+includedir=\${prefix}/include
 
 Name: sdl2-mmiyoo
 Description: SDL2 MMIYOO backend
 Version: 2.0.0
-Libs: -L${libdir} -lSDL2 -lEGL -lGLESv2 -lneonarmmiyoo
-Cflags: -I${includedir}/SDL2 -I${includedir}
+Libs: -L\${libdir} -lSDL2 ${gl_libs}-lneonarmmiyoo
+Cflags: -I\${includedir}/SDL2 -I\${includedir}
 EOF
-cat > "$bundle_dir/bin/sdl2-config" <<'EOF'
+cat > "$bundle_dir/bin/sdl2-config" <<EOF
 #!/usr/bin/env sh
-prefix=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-case "${1:-}" in
-  --cflags) printf '%s\n' "-I$prefix/include/SDL2 -I$prefix/include" ;;
-  --libs) printf '%s\n' "-L$prefix/lib -lSDL2 -lEGL -lGLESv2 -lneonarmmiyoo" ;;
+prefix=\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)
+case "\${1:-}" in
+  --cflags) printf '%s\n' "-I\$prefix/include/SDL2 -I\$prefix/include" ;;
+  --libs) printf '%s\n' "-L\$prefix/lib -lSDL2 ${gl_libs}-lneonarmmiyoo" ;;
   --version) printf '%s\n' '2.0' ;;
   *) printf '%s\n' 'usage: sdl2-config [--cflags|--libs|--version]' >&2; exit 1 ;;
 esac
