@@ -14,6 +14,7 @@ required=(
   "id:"
   "name:"
   "source:"
+  "modified_source:"
 )
 
 for field in "${required[@]}"; do
@@ -35,6 +36,9 @@ case "$artifact_type" in
     required=("app_dist:" "  template:")
     ;;
   tool_bundle)
+    required=("artifact:" "  output_name:")
+    ;;
+  port)
     required=("artifact:" "  output_name:")
     ;;
   *)

@@ -1,5 +1,6 @@
 id: sdl2-mmiyoo-addons
 name: SDL2 image, TTF, net, and mixer add-ons for MMIYOO SDL2
+modified_source: no
 version: 7e998b923738d3b00e3a2867c8aa29c4b7b1d06a
 source:
   repo: https://github.com/Yorisoft/pokedex_miyoo.git

@@ -33,6 +33,13 @@ while IFS= read -r dependency; do
   [[ -n "$dependency" ]] || continue
   dependency_marker="$BUILDBOT_SESSION_DIR/$dependency.complete"
   if [[ ! -f "$dependency_marker" ]]; then
+    if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
+      # Let the consumer opt out of GLES (e.g. an app with no GL/EGL symbols).
+      sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
+      if [[ "$sdl2_gles" == "no" ]]; then
+        export SDL2_MIYOO_ENABLE_GLES=0
+      fi
+    fi
     "$script_dir/build-package.sh" "$dependency"
   fi
   dependency_var="PACKAGE_DEPENDENCY_${dependency//-/_}"
@@ -73,6 +80,10 @@ case "$artifact_type" in
     ;;
   tool_bundle)
     stage_dir="$work_dir/bundle"
+    mkdir -p "$stage_dir"
+    ;;
+  port)
+    stage_dir="$work_dir/port"
     mkdir -p "$stage_dir"
     ;;
   *)

@@ -1,0 +1,25 @@
+id: vvvvvv-mmiyoo
+name: VVVVVV for Miyoo Mini family
+modified_source: no
+version: "2.3.6"
+source:
+  repo: https://github.com/TerryCavanagh/VVVVVV.git
+  ref: "2.3.6"
+depends_on:
+  - sdl2-mmiyoo-lib
+  - sdl2-mmiyoo-addons
+sdl2_gles: no
+build_all: false
+artifact:
+  type: port
+  output_name: vvvvvv-mmiyoo
+host:
+  build_system: cmake
+  source_dir: desktop_version
+  pkg_config:
+    - sdl2
+    - SDL2_mixer
+  run_script: packages/vvvvvv-mmiyoo/scripts/run-host.sh
+  build_target: VVVVVV
+  outputs:
+    - build/VVVVVV

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Save>
+    <!-- Save file -->
+    <Data>
+        <unlock>0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,</unlock>
+        <unlocknotify>0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,</unlocknotify>
+        <besttimes>-1,-1,-1,-1,-1,-1,</besttimes>
+        <bestframes>-1,-1,-1,-1,-1,-1,</bestframes>
+        <besttrinkets>-1,-1,-1,-1,-1,-1,</besttrinkets>
+        <bestlives>-1,-1,-1,-1,-1,-1,</bestlives>
+        <bestrank>-1,-1,-1,-1,-1,-1,</bestrank>
+        <bestgamedeaths>-1</bestgamedeaths>
+        <stat_trinkets>0</stat_trinkets>
+        <swnbestrank>0</swnbestrank>
+        <swnrecord>0</swnrecord>
+        <fullscreen>0</fullscreen>
+        <stretch>0</stretch>
+        <useLinearFilter>0</useLinearFilter>
+        <window_width>640</window_width>
+        <window_height>480</window_height>
+        <noflashingmode>0</noflashingmode>
+        <colourblindmode>0</colourblindmode>
+        <setflipmode>0</setflipmode>
+        <invincibility>0</invincibility>
+        <slowdown>30</slowdown>
+        <advanced_smoothing>0</advanced_smoothing>
+        <usingmmmmmm>0</usingmmmmmm>
+        <ghostsenabled>0</ghostsenabled>
+        <skipfakeload>0</skipfakeload>
+        <disablepause>0</disablepause>
+        <disableaudiopause>0</disableaudiopause>
+        <notextoutline>0</notextoutline>
+        <translucentroomname>0</translucentroomname>
+        <over30mode>1</over30mode>
+        <inputdelay>0</inputdelay>
+        <glitchrunnermode></glitchrunnermode>
+        <showingametimer>0</showingametimer>
+        <vsync>1</vsync>
+        <musicvolume>256</musicvolume>
+        <soundvolume>256</soundvolume>
+        <separate_interact>0</separate_interact>
+        <controllerSensitivity>2</controllerSensitivity>
+        <flipButton>0</flipButton>
+        <flipButton>1</flipButton>
+        <flipButton>2</flipButton>
+        <flipButton>3</flipButton>
+        <enterButton>6</enterButton>
+        <enterButton>4</enterButton>
+        <escButton>5</escButton>
+        <restartButton>10</restartButton>
+        <interactButton>2</interactButton>
+    </Data>
+</Save>
