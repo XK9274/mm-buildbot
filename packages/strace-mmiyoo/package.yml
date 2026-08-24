@@ -1,5 +1,6 @@
 id: strace-mmiyoo
 name: Miyoo strace
+modified_source: no
 version: "6.12"
 source:
   url: https://github.com/strace/strace/releases/download/v6.12/strace-6.12.tar.xz

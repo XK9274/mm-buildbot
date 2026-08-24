@@ -1,5 +1,6 @@
 id: retroarch-mmiyoo-sdl2-gl
 name: RetroArch Miyoo SDL2 GL
+modified_source: yes
 version: latest
 source:
   repo: https://github.com/libretro/RetroArch.git

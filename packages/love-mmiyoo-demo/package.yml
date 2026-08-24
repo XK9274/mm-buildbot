@@ -1,5 +1,6 @@
 id: love-mmiyoo-demo
 name: LÖVE Miyoo SDL2/GLES Demo
+modified_source: yes
 version: 11.5
 build_all: true
 source:

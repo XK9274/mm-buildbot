@@ -1,5 +1,6 @@
 id: blobbyvolley2-mmiyoo
 name: Blobby Volley 2 for Miyoo Mini family
+modified_source: no
 version: c28c5fa87872b7592f34f5f86196e93d127b6cf9
 source:
   repo: https://github.com/danielknobe/blobbyvolley2.git

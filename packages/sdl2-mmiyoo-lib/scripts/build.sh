@@ -61,6 +61,8 @@ gles_flag=""
 [[ "$enable_gles" == "1" ]] && gles_flag="--enable-gles"
 
 require_tool docker
+# TODO: support a non-nested toolchain mode; this Docker invocation currently
+# causes Docker-in-Docker when the buildbot itself runs inside a container.
 log "Building SDL2 via mk_miyoo.sh (--docker $gles_flag --clean build)"
 ( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker $gles_flag --clean build )
 

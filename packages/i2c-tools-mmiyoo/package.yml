@@ -1,5 +1,6 @@
 id: i2c-tools-mmiyoo
 name: Miyoo I2C Tools
+modified_source: no
 version: "4.4"
 source:
   url: https://www.kernel.org/pub/software/utils/i2c-tools/i2c-tools-4.4.tar.xz
