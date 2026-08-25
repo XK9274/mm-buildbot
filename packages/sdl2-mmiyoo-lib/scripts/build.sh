@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 bundle_dir="${4:?bundle dir required}"
+source "$repo_root/packages/.shared/upstream-port.sh"
 
 sdl_repo="${SDL2_MIYOO_REPO:-https://github.com/XK9274/sdl2_miyoo.git}"
 sdl_ref="${SDL2_MIYOO_REF:-main}"
@@ -60,11 +61,15 @@ fi
 gles_flag=""
 [[ "$enable_gles" == "1" ]] && gles_flag="--enable-gles"
 
-require_tool docker
-# TODO: support a non-nested toolchain mode; this Docker invocation currently
-# causes Docker-in-Docker when the buildbot itself runs inside a container.
-log "Building SDL2 via mk_miyoo.sh (--docker $gles_flag --clean build)"
-( cd "$sdl_dir" && ./build-scripts/mk_miyoo.sh --docker $gles_flag --clean build )
+image="$(ensure_union_toolchain_image)"
+log "Building SDL2 via mk_miyoo.sh ($gles_flag --clean build) in $image"
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -e HOME=/tmp \
+  --workdir /workspace/sdl2 \
+  -v "$sdl_dir":/workspace/sdl2 \
+  "$image" \
+  /workspace/sdl2/build-scripts/mk_miyoo.sh $gles_flag --clean build
 
 [[ -f "$sdl_dir/output/libSDL2-2.0.so.0" ]] || {
   printf 'Expected SDL output was not built: %s/output/libSDL2-2.0.so.0\n' "$sdl_dir" >&2

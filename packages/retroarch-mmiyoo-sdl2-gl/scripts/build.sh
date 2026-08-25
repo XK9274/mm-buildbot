@@ -11,7 +11,6 @@ retroarch_ref="${RETROARCH_REF:-master}"
 retroarch_assets_repo="${RETROARCH_ASSETS_REPO:-https://github.com/libretro/retroarch-assets.git}"
 retroarch_assets_ref="${RETROARCH_ASSETS_REF:-master}"
 union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
-union_dir="${UNION_TOOLCHAIN_DIR:-/tmp/union-miyoomini-toolchain}"
 build_swiftshader="${BUILD_SWIFTSHADER:-0}"
 make_jobs="${MAKE_JOBS:-}"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
@@ -62,20 +61,13 @@ copy_if_exists() {
 }
 
 toolchain_root() {
-  if [[ -d "$union_dir/workspace" ]]; then
-    printf '%s\n' "$union_dir"
-    return
-  fi
-
-  # TODO: once sdl2_miyoo/build-scripts/mk_miyoo.sh is pushed to the remote,
-  # make the cloned toolchain path the default in CI.
   if [[ ! -d "$toolchain_work/.git" ]]; then
-    log "Cloning Union toolchain from $union_repo"
-    git clone --depth=1 "$union_repo" "$toolchain_work"
+    log "Cloning Union toolchain from $union_repo" >&2
+    git clone --depth=1 "$union_repo" "$toolchain_work" >&2
   else
-    log "Updating Union toolchain in $toolchain_work"
-    git -C "$toolchain_work" fetch --depth=1 origin
-    git -C "$toolchain_work" reset --hard origin/HEAD
+    log "Updating Union toolchain in $toolchain_work" >&2
+    git -C "$toolchain_work" fetch --depth=1 origin >&2
+    git -C "$toolchain_work" reset --hard origin/HEAD >&2
   fi
 
   printf '%s\n' "$toolchain_work"
