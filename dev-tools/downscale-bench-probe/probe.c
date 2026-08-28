@@ -1,15 +1,15 @@
-/* Compares three ways to get an oversized ARGB8888 surface down to the real
+/* Compares two ways to get an oversized ARGB8888 surface down to the real
  * 640x480 panel: MI_GFX_BitBlit's own implicit hardware scale (source and
- * destination rects of different sizes on the same call), the plain C
- * downscale_area_c32, and the NEON downscale_area_n32 currently used by
- * sdl2_miyoo's per-frame composite path. No SDL2 -- raw MI_SYS/MI_GFX only,
- * mirroring the exact sequence sdl2_miyoo's own FB_Init()/GFX_Copy() use
- * (SDL_video_mmiyoo.c). Runs the same resolution above the panel size
- * through all three variants in turn, logging every frame's wall time so a
- * hang's last-logged line still pinpoints exactly where it happened. Each
- * variant's held on-screen result is rotated 180 (the panel is mounted
- * upside down, same as every screen-target draw in sdl2_miyoo itself) and
- * carries an on-screen banner naming the resolution/target/variant. */
+ * destination rects of different sizes on the same call) against the NEON
+ * downscale_area_n32 fallback sdl2_miyoo uses when the hardware path
+ * fails. No SDL2 -- raw MI_SYS/MI_GFX only, mirroring the exact sequence
+ * sdl2_miyoo's own FB_Init()/GFX_Copy() use (SDL_video_mmiyoo.c). Runs the
+ * same resolution above the panel size through both variants in turn,
+ * logging every frame's wall time so a hang's last-logged line still
+ * pinpoints exactly where it happened. Each variant's held on-screen
+ * result is rotated 180 (the panel is mounted upside down, same as every
+ * screen-target draw in sdl2_miyoo itself) and carries an on-screen banner
+ * naming the resolution/target/variant. */
 #include <mi_sys.h>
 #include <mi_gfx.h>
 #include <neon.h>
@@ -34,8 +34,8 @@
 #define PANEL_H 480
 #define MAX_FENCES 64
 
-typedef enum { VARIANT_HW = 0, VARIANT_C, VARIANT_NEON, VARIANT_COUNT } Variant;
-static const char *variant_name[VARIANT_COUNT] = { "hw", "c", "neon" };
+typedef enum { VARIANT_HW = 0, VARIANT_NEON, VARIANT_COUNT } Variant;
+static const char *variant_name[VARIANT_COUNT] = { "hw", "neon" };
 
 typedef struct { int w, h; } Resolution;
 static const Resolution g_resolutions[] = {
@@ -360,13 +360,8 @@ int main(int argc, char *argv[])
                 } else {
                     flush_fences();
                     MI_SYS_FlushInvCache(src.vir, (MI_U32)(w * h * 4));
-                    if (variant == VARIANT_C) {
-                        downscale_area_c32(src.vir, scratch.vir, (uint32_t)w, (uint32_t)h,
-                                            (uint32_t)(w * 4), (uint32_t)(PANEL_W * 4), PANEL_W, PANEL_H);
-                    } else {
-                        downscale_area_n32(src.vir, scratch.vir, (uint32_t)w, (uint32_t)h,
-                                            (uint32_t)(w * 4), (uint32_t)(PANEL_W * 4), PANEL_W, PANEL_H);
-                    }
+                    downscale_area_n32(src.vir, scratch.vir, (uint32_t)w, (uint32_t)h,
+                                        (uint32_t)(w * 4), (uint32_t)(PANEL_W * 4), PANEL_W, PANEL_H);
                     MI_SYS_FlushInvCache(scratch.vir, (MI_U32)(PANEL_W * PANEL_H * 4));
 
                     MI_GFX_Rect_t full_rect = { 0, 0, PANEL_W, PANEL_H };
