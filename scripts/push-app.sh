@@ -26,7 +26,10 @@ device_dir="$device_app_root/$app_name"
 log() { printf '[push-app] %s\n' "$*"; }
 
 log "Pushing $local_dir -> $device_user@$device_ip:$device_dir"
-sshpass -p "$device_pass" ssh "$device_user@$device_ip" "mkdir -p '$device_dir'"
+# Full replace, not a merge -- a stale file from a previous push of a
+# different app-dist shape (e.g. fewer probes built this time) would
+# otherwise linger forever and fail the checksum comparison below.
+sshpass -p "$device_pass" ssh "$device_user@$device_ip" "rm -rf '$device_dir' && mkdir -p '$device_dir'"
 tar --dereference -C "$local_dir" -czf - . | \
   sshpass -p "$device_pass" ssh "$device_user@$device_ip" "tar -xzf - -C '$device_dir'"
 
