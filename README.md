@@ -1,6 +1,6 @@
 # mm-buildbot
 
-Personal build bot for producing packaged app distributions and standalone tool
+Build bot for producing packaged app distributions and standalone tool
 bundles from upstream source repos.
 
 This repo owns build recipes, templates, and automation. It does not own the
