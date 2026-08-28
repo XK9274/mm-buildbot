@@ -8,7 +8,7 @@ app_dist_dir="${4:?app-dist dir required}"
 
 love_repo="${LOVE_REPO:-https://github.com/love2d/love.git}"
 love_ref="${LOVE_REF:-f834ab72481e95fa90abf573643c8dd168ae0660}"
-union_dir="${UNION_TOOLCHAIN_DIR:-/home/mattpc/HueTesting/union-miyoomini-toolchain}"
+union_dir="${UNION_TOOLCHAIN_DIR:?UNION_TOOLCHAIN_DIR required (path to your Union Miyoo Mini toolchain checkout)}"
 package_dir="$repo_root/packages/love-mmiyoo-demo"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 love_image="${MIYOO_LOVE_IMAGE:-${docker_image}-love-build-v1}"
