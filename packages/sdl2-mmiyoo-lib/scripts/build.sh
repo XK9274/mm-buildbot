@@ -11,6 +11,13 @@ sdl_repo="${SDL2_MIYOO_REPO:-https://github.com/XK9274/sdl2_miyoo.git}"
 sdl_ref="${SDL2_MIYOO_REF:-main}"
 sdl_dir="$work_dir/src/sdl2_miyoo"
 enable_gles="${SDL2_MIYOO_ENABLE_GLES:-1}"
+# Local-only override for testing a neon-arm-library-miyoo branch that hasn't
+# been pushed to the real remote yet -- mounted read-only into the container
+# and passed to mk_miyoo.sh as NEON_REPO (file:// URL) so nothing touches the
+# actual GitHub repo. Leave unset for the normal/default build.
+neon_local_repo="${SDL2_MIYOO_NEON_LOCAL_REPO:-}"
+strip_flag=""
+[[ "${SDL2_MIYOO_DEBUG:-0}" == "1" ]] && strip_flag="--no-strip"
 
 log() {
   printf '[%s] %s\n' "$package_id" "$*"
@@ -62,14 +69,28 @@ gles_flag=""
 [[ "$enable_gles" == "1" ]] && gles_flag="--enable-gles"
 
 image="$(ensure_union_toolchain_image)"
-log "Building SDL2 via mk_miyoo.sh ($gles_flag --clean build) in $image"
+log "Building SDL2 via mk_miyoo.sh ($gles_flag $strip_flag --clean build) in $image"
+neon_mount_args=()
+neon_repo_env=""
+if [[ -n "$neon_local_repo" ]]; then
+  [[ -d "$neon_local_repo/.git" ]] || {
+    printf 'SDL2_MIYOO_NEON_LOCAL_REPO does not look like a git repo: %s\n' "$neon_local_repo" >&2
+    exit 1
+  }
+  log "Using local neon-arm-library-miyoo checkout: $neon_local_repo"
+  neon_mount_args=(-v "$neon_local_repo":/workspace/neon-src:ro)
+  neon_repo_env="file:///workspace/neon-src"
+fi
 docker run --rm \
   --user "$(id -u):$(id -g)" \
   -e HOME=/tmp \
+  -e NEON_REF="${SDL2_MIYOO_NEON_REF:-}" \
+  -e NEON_REPO="$neon_repo_env" \
+  "${neon_mount_args[@]}" \
   --workdir /workspace/sdl2 \
   -v "$sdl_dir":/workspace/sdl2 \
   "$image" \
-  /workspace/sdl2/build-scripts/mk_miyoo.sh $gles_flag --clean build
+  /workspace/sdl2/build-scripts/mk_miyoo.sh $gles_flag $strip_flag --clean build
 
 [[ -f "$sdl_dir/output/libSDL2-2.0.so.0" ]] || {
   printf 'Expected SDL output was not built: %s/output/libSDL2-2.0.so.0\n' "$sdl_dir" >&2
