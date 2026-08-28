@@ -41,9 +41,6 @@ app icon is added or changed on `main`.
 <tbody>
 <tr><td>—<br><code>sdl2-mmiyoo-lib</code></td><td>Shared SDL2 library bundle (<code>libSDL2-2.0.so.0</code>, <code>libEGL.so</code>, <code>libGLESv2.so</code>, <code>libneonarmmiyoo.so</code> + headers), cloned and built from <code>sdl2_miyoo</code> via a single <code>docker run</code> against the shared Union toolchain image, invoking <code>mk_miyoo.sh --enable-gles --clean build</code> directly (no nested Docker).</td><td>—</td><td>no</td><td>Not an app — a shared provider consumed by other packages via <code>depends_on</code>. <code>build_all: false</code>; built on demand for whichever consumer needs it.</td></tr>
 <tr><td><img src="packages/retroarch-mmiyoo-sdl2-gl/templates/retroarch_sdl2/icon.png" alt="RetroArch icon" width="32" height="32">&nbsp;<code>retroarch-mmiyoo-sdl2-gl</code></td><td>Upstream RetroArch for Miyoo Mini, built against the shared <code>sdl2_miyoo</code> SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble).</td><td>—</td><td>yes</td><td>Patched for texture-load diagnostics/debug logging; links and bundles the single <code>sdl2-mmiyoo-lib</code> provider. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code> and <code>packages/retroarch-mmiyoo-sdl2-gl/README.md</code>.</td></tr>
-<tr><td>—<br><code>i2c-tools-mmiyoo</code></td><td>Upstream <code>i2c-tools</code> 4.4 (<code>i2cdetect</code>, <code>i2cdump</code>, <code>i2cget</code>, <code>i2cset</code>, <code>i2ctransfer</code>).</td><td>—</td><td>no</td><td>Floating tool bundle, no <code>launch.sh</code>/app-dist shape — copy <code>bin/</code> to the device and invoke directly.</td></tr>
-<tr><td>—<br><code>strace-mmiyoo</code></td><td>Union-toolchain ARM hard-float build of <code>strace</code> 6.12.</td><td>—</td><td>no</td><td>Floating binary, dynamically linked against the device C library, no private shared-library deps.</td></tr>
-<tr><td>—<br><code>tcpdump-mmiyoo</code></td><td><code>tcpdump</code> 4.99.6 with its private <code>libpcap.so.1</code> dependency.</td><td>—</td><td>no</td><td>Floating bundle using an <code>$ORIGIN/../lib</code> runtime search path — copy <code>bin/</code> and <code>lib/</code> together.</td></tr>
 <tr><td><img src="packages/love-mmiyoo-demo/templates/LoveMiyoo/icon.png" alt="LÖVE icon" width="32" height="32">&nbsp;<code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 built against the shared <code>sdl2_miyoo</code> SDL2 backend, with a menu launcher over several test scenes.</td><td>yes</td><td>yes</td><td>Alters the app's bundled SDL2 libraries/build inputs. <strong>Early WIP</strong> — see <code>packages/love-mmiyoo-demo/STATUS.md</code> for known bugs. <code>build_all: true</code>; its build helper and cross-compilation configuration are vendored in the package.</td></tr>
 <tr><td><img src="packages/konpacto-mmiyoo/templates/Konpacto/icon.png" alt="Konpacto icon" width="32" height="32">&nbsp;<code>konpacto-mmiyoo</code></td><td>Konpacto FM Macro Tracker built against the shared <code>sdl2_miyoo</code> and <code>sdl2-mmiyoo-addons</code> providers.</td><td>yes</td><td>yes</td><td>Alters the app's bundled SDL2 libraries and injects LuaJIT plus <code>tinydir.h</code>; native host build uses system SDL2, SDL2_image, and SDL2_mixer. <code>build_all: false</code>.</td></tr>
 <tr><td>—<br><code>sdl2-mmiyoo-addons</code></td><td>SDL2_image, SDL2_ttf, SDL2_mixer, and SDL2_net, built via <code>scripts/mksdl2.sh</code> in <code>SDL2_SKIP_CORE=1</code> mode against the <code>sdl2-mmiyoo-lib</code> provider.</td><td>—</td><td>no</td><td>Not an app — a shared add-on provider consumed via <code>depends_on</code>. <code>build_all: false</code>; built on demand.</td></tr>
@@ -57,6 +54,41 @@ app icon is added or changed on `main`.
 run path using native system libraries. `modified source` indicates that the
 package recipe changes or injects files into the upstream source tree during
 the build.
+
+## Dev Tools
+
+`dev-tools/` holds standalone diagnostic tools and probes — device-hang
+repro cases, benchmarks, and utility bundles. Unlike `packages/`, these have
+no `package.yml`, clone no upstream source, and don't appear in the table
+above; each probe's C source is authored directly in this repo. Every probe
+has its own `compile.sh <out_dir>` (build only, no push).
+`dev-tools/probes-app/build.sh` compiles any set of probes into one
+directory and `package.sh` assembles them into a single on-device app
+(`config.json`/`icon.png`/`launch.sh`/`bin`/`lib`/`res`) — `launch.sh` runs
+whichever probe its `PROBE=` line names, so switching probes on-device is a
+one-line edit, not a re-push. Deploy any app-dist (probes or a real package)
+with `scripts/push-app.sh <local_dir> <device_app_name>`.
+
+<table>
+<colgroup>
+<col width="220">
+<col>
+<col width="200">
+<col width="160">
+<col width="180">
+</colgroup>
+<thead>
+<tr><th>tool</th><th>what it tests / does</th><th>logging</th><th>control</th><th>delivery</th></tr>
+</thead>
+<tbody>
+<tr><td><code>downscale-bench-probe</code></td><td>Compares <code>MI_GFX_BitBlit</code>'s implicit hardware scale against the NEON <code>downscale_area_n32</code> fallback across a resolution matrix (800x600 through 1920x1080); each variant's result is rotated 180° and held on-screen with an on-screen banner naming resolution/target/variant.</td><td>Per-frame timing and a final summary table, both to the probe's own <code>probe.log</code> and to <code>launch.sh</code>'s <code>logs/&lt;probe&gt;-&lt;timestamp&gt;.log</code> capture.</td><td><code>PROBE=downscale-bench-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>frames_per_variant</code> (default 150).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
+<tr><td><code>fragmented-composite-probe</code></td><td>Repro matching BlobbyVolley2's real <code>RenderManagerSDL::init()</code>/<code>refresh()</code> window/renderer/viewport sequence exactly, isolating a BV2-only hang from the generic oversized-composite one.</td><td>Checkpoint log to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=fragmented-composite-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>small_count</code> (default 200, textures created before the oversized composite).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
+<tr><td><code>texture-count-probe</code></td><td>Repro for a hang theory tied to BlobbyVolley2's asset loading (many small <code>SDL_CreateTextureFromSurface</code> calls); <code>KEEP_ALIVE</code> toggles whether textures stay live or are destroyed between creates.</td><td>Checkpoint log to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=texture-count-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>KEEP_ALIVE</code> (<code>0</code>/<code>1</code>).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
+<tr><td><code>i2c-tools-mmiyoo</code></td><td>Upstream <code>i2c-tools</code> 4.4 (<code>i2cdetect</code>, <code>i2cdump</code>, <code>i2cget</code>, <code>i2cset</code>, <code>i2ctransfer</code>) for direct I2C bus inspection.</td><td>stdout only, whatever the invoking command captures.</td><td>Invoked directly per-command over SSH.</td><td>Floating tool bundle, no <code>launch.sh</code>/app-dist shape — copy <code>bin/</code> to the device.</td></tr>
+<tr><td><code>strace-mmiyoo</code></td><td>Union-toolchain ARM hard-float build of <code>strace</code> 6.12, for live syscall tracing during a device-hang investigation.</td><td>stdout, or wherever the invoking command redirects it.</td><td>Invoked directly over SSH, typically wrapping another process's launch.</td><td>Floating binary, dynamically linked against the device C library, no private shared-library deps.</td></tr>
+<tr><td><code>tcpdump-mmiyoo</code></td><td><code>tcpdump</code> 4.99.6 with its private <code>libpcap.so.1</code> dependency, for capturing on-device network traffic.</td><td>stdout or a <code>.pcap</code> file, whichever <code>tcpdump</code>'s own arguments target.</td><td>Invoked directly over SSH.</td><td>Floating bundle using an <code>$ORIGIN/../lib</code> runtime search path — copy <code>bin/</code> and <code>lib/</code> together.</td></tr>
+</tbody>
+</table>
 
 ## Basic Flow
 
