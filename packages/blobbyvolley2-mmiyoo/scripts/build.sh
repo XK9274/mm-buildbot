@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 app_dist_dir="${4:?app-dist dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 blobby_repo="${BLOBBYVOLLEY2_REPO:-https://github.com/danielknobe/blobbyvolley2.git}"
 blobby_ref="${BLOBBYVOLLEY2_REF:-c28c5fa87872b7592f34f5f86196e93d127b6cf9}"
@@ -42,35 +43,6 @@ ensure_image() {
     log "Building Blobby Volley 2 dependency image $blobby_image"
     docker build --build-arg "BASE_IMAGE=$docker_image" -t "$blobby_image" "$package_dir"
   fi
-}
-
-toolchain_readelf() {
-  local target="$1"
-  shift
-  docker run --rm --user "$(id -u):$(id -g)" \
-    -v "$target":/work/input:ro \
-    "$docker_image" \
-    /opt/miyoomini-toolchain/usr/bin/arm-linux-gnueabihf-readelf "$@" /work/input
-}
-
-is_platform_library() {
-  case "$1" in
-    libc.so.*|libm.so.*|libdl.so.*|librt.so.*|libpthread.so.*|libstdc++.so.*|libgcc_s.so.*|ld-linux-armhf.so.*|libmi_*.so|libcam_os_wrapper.so)
-      return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-verify_runtime_closure() {
-  local target needed
-  while IFS= read -r -d '' target; do
-    while IFS= read -r needed; do
-      if ! is_platform_library "$needed" && [[ ! -e "$app_root/lib/$needed" ]]; then
-        printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
-        exit 1
-      fi
-    done < <(toolchain_readelf "$target" -d 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
-  done < <(find "$app_root" -maxdepth 1 -type f -perm -0100 -print0; find "$app_root/lib" -type f -name '*.so*' -print0)
 }
 
 require_tool git
@@ -116,6 +88,8 @@ set(PHYSFS_LIBRARY /workspace/physfs-prefix/lib/libphysfs.a)
 set(PHYSFS_FOUND TRUE)
 EOF
 
+write_mmiyoo_cmake_toolchain_file "$work_dir/toolchain.cmake"
+
 ensure_image
 log "Building PhysFS and Blobby Volley 2 against the shared MMIYOO SDL2 provider"
 docker run --rm --user root -e HOME=/root \
@@ -131,8 +105,6 @@ docker run --rm --user root -e HOME=/root \
     trap cleanup EXIT
 
     sysroot=/opt/miyoomini-toolchain/arm-linux-gnueabihf/libc
-    cross_cc=/opt/miyoomini-toolchain/bin/arm-linux-gnueabihf-gcc
-    cross_cxx=/opt/miyoomini-toolchain/bin/arm-linux-gnueabihf-g++
 
     # Boost is header-only for this project (algorithm/string, crc, exception);
     # its FindBoost.cmake module still does find_path() under the hood, which
@@ -145,13 +117,7 @@ docker run --rm --user root -e HOME=/root \
 
     rm -rf /workspace/physfs-build /workspace/physfs-prefix
     cmake -S /workspace/src/physfs -B /workspace/physfs-build \
-      -DCMAKE_SYSTEM_NAME=Linux \
-      -DCMAKE_C_COMPILER="$cross_cc" \
-      -DCMAKE_CXX_COMPILER="$cross_cxx" \
-      -DCMAKE_FIND_ROOT_PATH="$sysroot" \
-      -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-      -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-      -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+      -DCMAKE_TOOLCHAIN_FILE=/workspace/toolchain.cmake \
       -DCMAKE_INSTALL_PREFIX=/workspace/physfs-prefix \
       -DPHYSFS_BUILD_SHARED=OFF \
       -DPHYSFS_BUILD_TEST=OFF \
@@ -171,13 +137,7 @@ docker run --rm --user root -e HOME=/root \
 
     rm -rf /workspace/blobby-build
     cmake -S /workspace/src/blobbyvolley2 -B /workspace/blobby-build \
-      -DCMAKE_SYSTEM_NAME=Linux \
-      -DCMAKE_C_COMPILER="$cross_cc" \
-      -DCMAKE_CXX_COMPILER="$cross_cxx" \
-      -DCMAKE_FIND_ROOT_PATH="$sysroot" \
-      -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-      -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-      -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+      -DCMAKE_TOOLCHAIN_FILE=/workspace/toolchain.cmake \
       -DCMAKE_MODULE_PATH=/workspace/cmake-modules \
       -DBUILD_TESTS=OFF \
       "${debug_cmake_args[@]}"
@@ -224,5 +184,5 @@ if [[ ! -f "$app_root/lib/libz.so.1" ]]; then
     bash -c 'found=$(find /opt/miyoomini-toolchain -name "libz.so.1" | head -1); [ -n "$found" ] && cp -aL "$found" /workspace/out/libz.so.1'
 fi
 
-verify_runtime_closure
+verify_mmiyoo_runtime_closure "$app_root" "$docker_image"
 log "App distribution staged at $app_root"

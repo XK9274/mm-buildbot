@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 app_dist_dir="${4:?app-dist dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 pokedex_repo="${YORISOFT_POKEDEX_REPO:-https://github.com/Yorisoft/pokedex_miyoo.git}"
 pokedex_ref="${YORISOFT_POKEDEX_REF:-7e998b923738d3b00e3a2867c8aa29c4b7b1d06a}"
@@ -41,34 +42,10 @@ ensure_toolchain_image() {
   docker build -t "$docker_image" "$union_dir"
 }
 
-required_runtime_library() {
-  case "$1" in
-    libc.so.*|libm.so.*|libdl.so.*|librt.so.*|libpthread.so.*|libstdc++.so.*|libgcc_s.so.*|libz.so.*|ld-linux-armhf.so.*|libmi_*.so|libcam_os_wrapper.so)
-      return 1
-      ;;
-    *)
-      return 0
-      ;;
-  esac
-}
-
-verify_runtime_libraries() {
-  local target needed
-  while IFS= read -r -d '' target; do
-    while IFS= read -r needed; do
-      if required_runtime_library "$needed" && [[ ! -e "$app_root/lib/$needed" ]]; then
-        printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
-        exit 1
-      fi
-    done < <(arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
-  done < <(find "$app_root" -type f -perm -0100 -print0; find "$app_root/lib" -type f -name '*.so*' -print0)
-}
-
 require_tool git
 require_tool curl
 require_tool sha256sum
 require_tool unzip
-require_tool arm-linux-gnueabihf-readelf
 
 : "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 : "${MMIYOO_SDL2_ADDONS_PREFIX:?Missing sdl2-mmiyoo-addons dependency prefix}"
@@ -151,6 +128,6 @@ done
 # but requires an additional libglapi runtime library. Retrodex and its freshly
 # built SDL stack do not link to it.
 rm -f "$app_root/lib/libGLESv1_CM.so"
-verify_runtime_libraries
+verify_mmiyoo_runtime_closure "$app_root"
 
 log "App distribution staged at $app_root"

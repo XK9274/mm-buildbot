@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 app_dist_dir="${4:?app-dist dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 konpacto_repo="${KONPACTO_REPO:-https://github.com/wapordev/konpacto.git}"
 konpacto_ref="${KONPACTO_REF:-2d196a918bcd8311f57b46e75d60a390f0464701}"
@@ -55,32 +56,8 @@ ensure_toolchain_image() {
     -f "$toolchain_dockerfile" -t "$docker_image" "$repo_root"
 }
 
-required_runtime_library() {
-  case "$1" in
-    libc.so.*|libm.so.*|libdl.so.*|librt.so.*|libpthread.so.*|libstdc++.so.*|libgcc_s.so.*|libz.so.*|ld-linux-armhf.so.*|libmi_*.so|libcam_os_wrapper.so)
-      return 1
-      ;;
-    *)
-      return 0
-      ;;
-  esac
-}
-
-verify_runtime_libraries() {
-  local target needed
-  while IFS= read -r -d '' target; do
-    while IFS= read -r needed; do
-      if required_runtime_library "$needed" && [[ ! -e "$app_root/lib/$needed" ]]; then
-        printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
-        exit 1
-      fi
-    done < <(arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
-  done < <(find "$app_root" -type f -perm -0100 -print0; find "$app_root/lib" -type f -name '*.so*' -print0)
-}
-
 require_tool git
 require_tool docker
-require_tool arm-linux-gnueabihf-readelf
 
 : "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 : "${MMIYOO_SDL2_ADDONS_PREFIX:?Missing sdl2-mmiyoo-addons dependency prefix}"
@@ -172,6 +149,6 @@ install -m 755 "$MMIYOO_SDL2_PREFIX/lib/libSDL2-2.0.so.0" "$app_root/lib/libSDL2
 # a res/ prefix like other packages here.
 cp -a "$konpacto_dir/src/assets" "$app_root/assets"
 
-verify_runtime_libraries
+verify_mmiyoo_runtime_closure "$app_root"
 
 log "App distribution staged at $app_root"

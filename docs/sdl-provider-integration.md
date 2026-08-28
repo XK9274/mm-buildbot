@@ -18,6 +18,32 @@ that core provider. It never compiles stock SDL2.
 | `love-mmiyoo-demo` | yes | no | Its local build hook installs the provider; it does not invoke `mk_mmiyoo.sh`. |
 | Half-Life, POSTAL, OpenRCT2, Elma, Frozen Bubble, Super Haxagon, ONScripter-JH, Captain Claw | yes | no | Shared source-port adapter exports the provider include/lib/pkg-config paths and stages/verifies the core runtime closure. |
 
+## CMake cross-compile boilerplate
+
+`packages/.shared/port-common.sh`'s `write_mmiyoo_cmake_toolchain_file
+<destination>` writes the Union-toolchain cross-compile settings that are
+identical across every CMake-based recipe (compiler paths, sysroot,
+`CMAKE_FIND_ROOT_PATH_MODE_*`). Point `cmake` at it with
+`-DCMAKE_TOOLCHAIN_FILE=<destination>` instead of repeating those `-D` flags
+inline (see `blobbyvolley2-mmiyoo/scripts/build.sh`).
+
+It does not cover SDL2 discovery — how a recipe wires the provider prefixes
+into its own build varies with what upstream's `CMakeLists.txt` already does,
+and each recipe still picks the matching approach itself:
+
+- No upstream `find_package(SDL2)` call at all (SDL2 paths passed as plain
+  variables, e.g. `SDL2_INCLUDE_DIRS`/`SDL2_LIBRARIES`): pass those variables
+  directly (`vvvvvv-mmiyoo`).
+- Upstream's own `find_package(SDL2)` has no CMake config to find and no
+  fallback: supply a small `FindSDL2.cmake` in `-DCMAKE_MODULE_PATH` that
+  sets the result variables directly (`blobbyvolley2-mmiyoo`).
+- Upstream vendors its own `FindSDL2*.cmake` modules (classic
+  `find_path`/`find_library`-based): pre-seed the `SDL2*_INCLUDE_DIR`/
+  `SDL2*_LIBRARY` cache variables on the `cmake` command line so
+  `find_path`/`find_library` short-circuit, avoiding the
+  `CMAKE_FIND_ROOT_PATH` re-rooting that would otherwise apply to their
+  `ENV SDL2*DIR` hints.
+
 ## Build-all behaviour
 
 `scripts/build-all.sh` creates one session, detects enabled packages that need

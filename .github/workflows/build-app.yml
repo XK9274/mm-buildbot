@@ -19,6 +19,21 @@ jobs:
       - name: Install packaging tools
         run: sudo apt-get update && sudo apt-get install -y zip python3-pil
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Clone Union Miyoo Mini toolchain
+        run: git clone --depth=1 https://github.com/XK9274/union-miyoomini-toolchain.git /tmp/union-miyoomini-toolchain
+
+      - name: Build Union toolchain image (cached)
+        uses: docker/build-push-action@v6
+        with:
+          context: /tmp/union-miyoomini-toolchain
+          tags: miyoomini-toolchain:latest
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Build package
         run: scripts/build-package.sh "${{ inputs.package }}"
 

@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 app_dist_dir="${4:?app-dist dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 love_repo="${LOVE_REPO:-https://github.com/love2d/love.git}"
 love_ref="${LOVE_REF:-f834ab72481e95fa90abf573643c8dd168ae0660}"
@@ -56,26 +57,6 @@ toolchain_readelf() {
     -v "$target":/work/input:ro \
     "$docker_image" \
     /opt/miyoomini-toolchain/usr/bin/arm-linux-gnueabihf-readelf "$@" /work/input
-}
-
-is_platform_library() {
-  case "$1" in
-    libc.so.*|libm.so.*|libdl.so.*|librt.so.*|libpthread.so.*|libstdc++.so.*|libgcc_s.so.*|ld-linux-armhf.so.*|libmi_*.so|libcam_os_wrapper.so)
-      return 0 ;;
-    *) return 1 ;;
-  esac
-}
-
-verify_runtime_closure() {
-  local target needed
-  while IFS= read -r -d '' target; do
-    while IFS= read -r needed; do
-      if ! is_platform_library "$needed" && [[ ! -e "$app_root/lib/$needed" ]]; then
-        printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
-        exit 1
-      fi
-    done < <(toolchain_readelf "$target" -d 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
-  done < <(find "$app_root" -type f -perm -0100 -print0; find "$app_root/lib" -type f -name '*.so*' -print0)
 }
 
 require_tool git
@@ -173,5 +154,5 @@ for library in libfreetype.so.6 libz.so.1 libpng16.so.16 libatomic.so.1; do
   [[ -f "$candidate" ]] && copy_soname_library "$candidate" "$app_root/lib"
 done
 
-verify_runtime_closure
+verify_mmiyoo_runtime_closure "$app_root" "$docker_image"
 log "App distribution staged at $app_root"
