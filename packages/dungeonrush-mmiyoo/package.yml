@@ -1,0 +1,27 @@
+id: dungeonrush-mmiyoo
+name: DungeonRush for Miyoo Mini family
+modified_source: no
+version: ff44828b2bd89e0edb831673aca64ef4377c0c32
+source:
+  repo: https://github.com/XK9274/DungeonRush.git
+  ref: ff44828b2bd89e0edb831673aca64ef4377c0c32
+depends_on:
+  - sdl2-mmiyoo-lib
+  - sdl2-mmiyoo-addons
+build_all: false
+artifact:
+  type: port
+  output_name: dungeonrush-mmiyoo
+host:
+  build_system: cmake
+  source_dir: .
+  pkg_config:
+    - sdl2
+    - SDL2_image
+    - SDL2_mixer
+    - SDL2_net
+    - SDL2_ttf
+  run_script: packages/dungeonrush-mmiyoo/scripts/run-host.sh
+  build_target: dungeon_rush
+  outputs:
+    - build/bin/dungeon_rush
