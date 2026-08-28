@@ -6,10 +6,16 @@
  * mirroring the exact sequence sdl2_miyoo's own FB_Init()/GFX_Copy() use
  * (SDL_video_mmiyoo.c). Runs the same resolution above the panel size
  * through all three variants in turn, logging every frame's wall time so a
- * hang's last-logged line still pinpoints exactly where it happened. */
+ * hang's last-logged line still pinpoints exactly where it happened. Each
+ * variant's held on-screen result is rotated 180 (the panel is mounted
+ * upside down, same as every screen-target draw in sdl2_miyoo itself) and
+ * carries an on-screen banner naming the resolution/target/variant. */
 #include <mi_sys.h>
 #include <mi_gfx.h>
 #include <neon.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include <fcntl.h>
 #include <linux/fb.h>
@@ -148,15 +154,73 @@ static void flush_fences(void)
     g_fence_count = 0;
 }
 
-static void build_plain_opt(MI_GFX_Opt_t *opt, const MI_GFX_Rect_t *clip)
+static void build_plain_opt(MI_GFX_Opt_t *opt, const MI_GFX_Rect_t *clip, MI_GFX_Rotate_e rotate)
 {
     memset(opt, 0, sizeof(*opt));
-    opt->eRotate = E_MI_GFX_ROTATE_0;
+    opt->eRotate = rotate;
     opt->eMirror = E_MI_GFX_MIRROR_NONE;
     opt->eDFBBlendFlag = E_MI_GFX_DFB_BLEND_NOFX;
     opt->eSrcDfbBldOp = E_MI_GFX_DFB_BLD_ONE;
     opt->eDstDfbBldOp = E_MI_GFX_DFB_BLD_ZERO;
     opt->stClipRect = *clip;
+}
+
+/* This panel is mounted upside down -- sdl2_miyoo's own driver rotates
+ * every screen-target draw 180 for exactly this reason (My_QueueCopy,
+ * SDL_render_mmiyoo.c: base_rotation = is_target_texture ? ROTATE_0 :
+ * ROTATE_180). Only the final present-to-fb blit below is a screen-target
+ * draw; every other blit in this probe writes to an off-screen MI_SYS
+ * surface and stays unrotated, matching that same convention. */
+#define SCREEN_ROTATE E_MI_GFX_ROTATE_180
+
+static FT_Library g_ft;
+static FT_Face g_face;
+static int g_font_ok = 0;
+
+static void font_init(const char *path, int pixel_size)
+{
+    if (FT_Init_FreeType(&g_ft) != 0) {
+        ck("FT_Init_FreeType failed");
+        return;
+    }
+    if (FT_New_Face(g_ft, path, 0, &g_face) != 0) {
+        ck("FT_New_Face failed for %s", path);
+        return;
+    }
+    FT_Set_Pixel_Sizes(g_face, 0, (FT_UInt)pixel_size);
+    g_font_ok = 1;
+}
+
+/* Stamps opaque white glyph coverage (above a threshold, no alpha blend)
+ * directly into an ARGB8888 buffer -- avoids needing to read back
+ * whatever GFX previously wrote under the text. Silently clips at the
+ * buffer edges. */
+static void draw_text(void *vir, int buf_w, int buf_h, int stride, int x, int y, const char *text)
+{
+    if (!g_font_ok) return;
+    int pen_x = x;
+    int baseline_y = y + (int)(g_face->size->metrics.ascender >> 6);
+
+    for (const unsigned char *p = (const unsigned char *)text; *p; p++) {
+        if (FT_Load_Char(g_face, *p, FT_LOAD_RENDER) != 0) continue;
+        FT_GlyphSlot slot = g_face->glyph;
+        FT_Bitmap *bmp = &slot->bitmap;
+        int gx = pen_x + slot->bitmap_left;
+        int gy = baseline_y - slot->bitmap_top;
+
+        for (unsigned int row = 0; row < bmp->rows; row++) {
+            int py = gy + (int)row;
+            if (py < 0 || py >= buf_h) continue;
+            for (unsigned int col = 0; col < bmp->width; col++) {
+                int px = gx + (int)col;
+                if (px < 0 || px >= buf_w) continue;
+                unsigned char coverage = bmp->buffer[row * (unsigned int)bmp->pitch + col];
+                if (coverage < 96) continue;
+                *(uint32_t *)((uint8_t *)vir + (size_t)py * stride + (size_t)px * 4) = 0xFFFFFFFFu;
+            }
+        }
+        pen_x += (int)(slot->advance.x >> 6);
+    }
 }
 
 static void draw_synthetic_frame(MI_GFX_Surface_t *src_surf, int w, int h, long frame)
@@ -190,13 +254,19 @@ static void update_stats(Stats *s, double us)
 
 int main(int argc, char *argv[])
 {
-    long frames_per_variant = (argc > 1) ? atol(argv[1]) : 300;
+    long frames_per_variant = (argc > 1) ? atol(argv[1]) : 150;
+    const char *font_path = (argc > 2) ? argv[2] : "font.otf";
     Stats table[RES_COUNT][VARIANT_COUNT];
     memset(table, 0, sizeof(table));
 
     remove("probe.log");
     g_log = fopen("probe.log", "a");
-    ck("start, frames_per_variant=%ld", frames_per_variant);
+    ck("start, frames_per_variant=%ld font=%s", frames_per_variant, font_path);
+
+    font_init(font_path, 18);
+    if (!g_font_ok) {
+        ck("WARNING: on-screen text disabled, font failed to load");
+    }
 
     if (MI_SYS_Init() != MI_SUCCESS) { ck("MI_SYS_Init FAILED"); return 1; }
     ck("MI_SYS_Init ok");
@@ -277,7 +347,7 @@ int main(int argc, char *argv[])
                     MI_GFX_Rect_t src_rect = { 0, 0, (MI_U32)w, (MI_U32)h };
                     MI_GFX_Rect_t dst_rect = { 0, 0, PANEL_W, PANEL_H };
                     MI_GFX_Opt_t opt;
-                    build_plain_opt(&opt, &dst_rect);
+                    build_plain_opt(&opt, &dst_rect, E_MI_GFX_ROTATE_0);
                     result = MI_GFX_BitBlit(&src_surf, &src_rect, &dst_surf, &dst_rect, &opt, &fence);
                     if (result != MI_SUCCESS) {
                         ck("%s/%s frame=%ld MI_GFX_BitBlit(scale) FAILED result=0x%x (%s)",
@@ -301,7 +371,7 @@ int main(int argc, char *argv[])
 
                     MI_GFX_Rect_t full_rect = { 0, 0, PANEL_W, PANEL_H };
                     MI_GFX_Opt_t opt;
-                    build_plain_opt(&opt, &full_rect);
+                    build_plain_opt(&opt, &full_rect, E_MI_GFX_ROTATE_0);
                     result = MI_GFX_BitBlit(&scratch_surf, &full_rect, &dst_surf, &full_rect, &opt, &fence);
                     if (result != MI_SUCCESS) {
                         ck("%s/%s frame=%ld MI_GFX_BitBlit(unscaled) FAILED result=0x%x (%s)",
@@ -329,14 +399,33 @@ int main(int argc, char *argv[])
             }
 
             if (fb_fd >= 0 && fb_surf.phyAddr) {
+                /* Every blit into dst_surf above already waited its own
+                 * fence synchronously, so dst.vir is safe to touch on the
+                 * CPU here with no extra flush_fences() call. Band sits at
+                 * the BOTTOM of dst_surf's (unrotated) coordinate space so
+                 * it lands at the TOP of the actual, rotated, viewed
+                 * screen -- SCREEN_ROTATE flips the whole image. */
+                char banner[96];
+                MI_GFX_Rect_t band = { 0, PANEL_H - 24, PANEL_W, 24 };
+                MI_GFX_Opt_t band_opt;
+                MI_U16 band_fence;
+                snprintf(banner, sizeof(banner), "%s  %d x %d -> %d x %d  %s scale  rot180",
+                         reslabel, w, h, PANEL_W, PANEL_H, variant_name[vi]);
+                build_plain_opt(&band_opt, &band, E_MI_GFX_ROTATE_0);
+                if (MI_GFX_QuickFill(&dst_surf, &band, 0xFF000000u, &band_fence) == MI_SUCCESS) {
+                    MI_GFX_WaitAllDone(FALSE, band_fence);
+                }
+                draw_text(dst.vir, PANEL_W, PANEL_H, PANEL_W * 4, 4, PANEL_H - 20, banner);
+                MI_SYS_FlushInvCache(dst.vir, dst.size);
+
                 MI_GFX_Rect_t full_rect = { 0, 0, PANEL_W, PANEL_H };
                 MI_GFX_Opt_t opt;
                 MI_U16 fence;
-                build_plain_opt(&opt, &full_rect);
+                build_plain_opt(&opt, &full_rect, SCREEN_ROTATE);
                 if (MI_GFX_BitBlit(&dst_surf, &full_rect, &fb_surf, &full_rect, &opt, &fence) == MI_SUCCESS) {
                     MI_GFX_WaitAllDone(FALSE, fence);
                     ck("%s/%s now on screen", reslabel, variant_name[vi]);
-                    sleep(2);
+                    sleep(1);
                 } else {
                     ck("%s/%s present-to-fb failed", reslabel, variant_name[vi]);
                 }
@@ -363,6 +452,7 @@ int main(int argc, char *argv[])
     }
 
     if (fb_fd >= 0) close(fb_fd);
+    if (g_font_ok) { FT_Done_Face(g_face); FT_Done_FreeType(g_ft); }
     MI_GFX_Close();
     MI_SYS_Exit();
     ck("done, exiting cleanly");

@@ -46,11 +46,12 @@ done
 
 needs_sdl2=0
 needs_neon_only=0
+needs_freetype=0
 needs_live_asset_extras=0
 for name in "${built[@]}"; do
   case "$name" in
-    downscale-bench-probe) needs_neon_only=1 ;;
-    live-asset-load-probe) needs_sdl2=1; needs_live_asset_extras=1 ;;
+    downscale-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
+    live-asset-load-probe) needs_sdl2=1; needs_live_asset_extras=1; needs_freetype=1 ;;
     physfs-read-probe) : ;;
     *) needs_sdl2=1 ;;
   esac
@@ -64,11 +65,18 @@ elif [[ $needs_neon_only -eq 1 ]]; then
   [[ -f "$sdl2_bundle/lib/libneonarmmiyoo.so" ]] && \
     install -m 755 "$sdl2_bundle/lib/libneonarmmiyoo.so" "$app_dist_dir/lib/libneonarmmiyoo.so"
 fi
+if [[ $needs_freetype -eq 1 ]]; then
+  # libfreetype needs libpng16 (embedded PNG bitmap strikes), which in turn
+  # needs a newer zlib than this device's own -- all three or the dynamic
+  # linker falls back to the system libpng16 and fails on a ZLIB symbol
+  # version mismatch.
+  for f in libfreetype.so.6 libpng16.so.16 libz.so.1; do
+    [[ -f "$runtime_libs/$f" ]] && install -m 755 "$runtime_libs/$f" "$app_dist_dir/lib/$f"
+  done
+fi
 if [[ $needs_live_asset_extras -eq 1 ]]; then
   [[ -f "$addons/lib/libSDL2_ttf-2.0.so.0.2000.2" ]] && \
     install -m 755 "$addons/lib/libSDL2_ttf-2.0.so.0.2000.2" "$app_dist_dir/lib/libSDL2_ttf-2.0.so.0"
-  [[ -f "$bv2_app_dist/lib/libz.so.1" ]] && install -m 755 "$bv2_app_dist/lib/libz.so.1" "$app_dist_dir/lib/"
-  [[ -f "$runtime_libs/libfreetype.so.6" ]] && install -m 755 "$runtime_libs/libfreetype.so.6" "$app_dist_dir/lib/"
   [[ -f "$runtime_libs/libpng16.so.16" ]] && install -m 755 "$runtime_libs/libpng16.so.16" "$app_dist_dir/lib/"
 fi
 
