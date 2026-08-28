@@ -120,6 +120,8 @@ ensure_image
 log "Building PhysFS and Blobby Volley 2 against the shared MMIYOO SDL2 provider"
 docker run --rm --user root -e HOME=/root \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \
+  -e BLOBBYVOLLEY2_DEBUG="${BLOBBYVOLLEY2_DEBUG:-0}" \
+  -e BLOBBYVOLLEY2_DEBUG_OPT_LEVEL="${BLOBBYVOLLEY2_DEBUG_OPT_LEVEL:-}" \
   --workdir /workspace \
   -v "$work_dir":/workspace \
   -v "$MMIYOO_SDL2_PREFIX":/opt/mmiyoo-sdl2:ro \
@@ -157,6 +159,16 @@ docker run --rm --user root -e HOME=/root \
     cmake --build /workspace/physfs-build -j"$(nproc)"
     cmake --install /workspace/physfs-build
 
+    debug_cmake_args=()
+    if [ "$BLOBBYVOLLEY2_DEBUG" = "1" ]; then
+      # Opt-in debug build: unstripped symbols, -O0 by default. Override
+      # with e.g. BLOBBYVOLLEY2_DEBUG_OPT_LEVEL=-O2 for a debug build at a
+      # different optimization level. Unset/0 leaves the normal release
+      # build unchanged.
+      opt_level="${BLOBBYVOLLEY2_DEBUG_OPT_LEVEL:--O0}"
+      debug_cmake_args=(-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-DDEBUG -g $opt_level" -DCMAKE_C_FLAGS="-DDEBUG -g $opt_level")
+    fi
+
     rm -rf /workspace/blobby-build
     cmake -S /workspace/src/blobbyvolley2 -B /workspace/blobby-build \
       -DCMAKE_SYSTEM_NAME=Linux \
@@ -167,7 +179,8 @@ docker run --rm --user root -e HOME=/root \
       -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
       -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
       -DCMAKE_MODULE_PATH=/workspace/cmake-modules \
-      -DBUILD_TESTS=OFF
+      -DBUILD_TESTS=OFF \
+      "${debug_cmake_args[@]}"
     cmake --build /workspace/blobby-build -j"$(nproc)"
   '
 
@@ -194,7 +207,7 @@ for archive in gfx sounds scripts backgrounds rules; do
   install -m 644 "$zip_file" "$app_root/$archive.zip"
 done
 for file in api.lua bot_api.lua rules_api.lua config.xml inputconfig.xml server.xml \
-            lang_cs.xml lang_de.xml lang_en.xml lang_es.xml lang_fr.xml lang_it.xml; do
+            lang_cs.xml lang_de.xml lang_en.xml lang_es.xml lang_fr.xml lang_it.xml Icon.bmp; do
   install -m 644 "$data_src/$file" "$app_root/$file"
 done
 
