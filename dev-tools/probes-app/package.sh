@@ -92,7 +92,14 @@ EOF
   printf 'app_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
   printf 'cd "$app_dir/res" 2>/dev/null || cd "$app_dir"\n'
   printf 'export LD_LIBRARY_PATH="$app_dir/lib:/config/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n\n'
-  printf 'exec "$app_dir/bin/$PROBE" $PROBE_ARGS\n'
+  printf 'mkdir -p "$app_dir/logs"\n'
+  printf 'run_log="$app_dir/logs/${PROBE}-$(date +%%Y%%m%%d-%%H%%M%%S).log"\n'
+  printf 'set +e\n'
+  printf '"$app_dir/bin/$PROBE" $PROBE_ARGS > "$run_log" 2>&1\n'
+  printf 'probe_exit=$?\n'
+  printf 'set -e\n'
+  printf 'echo "exit code: $probe_exit" >> "$run_log"\n'
+  printf 'exit "$probe_exit"\n'
 } > "$app_dist_dir/launch.sh"
 chmod 755 "$app_dist_dir/launch.sh"
 
