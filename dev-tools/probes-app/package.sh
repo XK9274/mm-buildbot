@@ -23,8 +23,6 @@ app_dist_dir="${2:?usage: package.sh <bin_dir> <app_dist_dir> [label] [default_p
 label="${3:-Device Probes}"
 
 sdl2_bundle="${MMIYOO_SDL2_PREFIX:-$repo_root/work/sdl2-mmiyoo-lib/bundle}"
-addons="${MMIYOO_ADDONS_PREFIX:-$repo_root/work/sdl2-mmiyoo-addons/bundle}"
-bv2_app_dist="${BLOBBYVOLLEY2_APP_DIST:-$repo_root/work/blobbyvolley2-mmiyoo/app-dist/BlobbyVolley2}"
 runtime_libs="${RUNTIME_LIBS_DIR:-$repo_root/work/love-mmiyoo-demo/sysroot-libs}"
 icon_src="${PROBES_APP_ICON:-$repo_root/packages/blobbyvolley2-mmiyoo/templates/BlobbyVolley2/icon.png}"
 
@@ -47,12 +45,9 @@ done
 needs_sdl2=0
 needs_neon_only=0
 needs_freetype=0
-needs_live_asset_extras=0
 for name in "${built[@]}"; do
   case "$name" in
     downscale-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
-    live-asset-load-probe) needs_sdl2=1; needs_live_asset_extras=1; needs_freetype=1 ;;
-    physfs-read-probe) : ;;
     *) needs_sdl2=1 ;;
   esac
 done
@@ -73,11 +68,6 @@ if [[ $needs_freetype -eq 1 ]]; then
   for f in libfreetype.so.6 libpng16.so.16 libz.so.1; do
     [[ -f "$runtime_libs/$f" ]] && install -m 755 "$runtime_libs/$f" "$app_dist_dir/lib/$f"
   done
-fi
-if [[ $needs_live_asset_extras -eq 1 ]]; then
-  [[ -f "$addons/lib/libSDL2_ttf-2.0.so.0.2000.2" ]] && \
-    install -m 755 "$addons/lib/libSDL2_ttf-2.0.so.0.2000.2" "$app_dist_dir/lib/libSDL2_ttf-2.0.so.0"
-  [[ -f "$runtime_libs/libpng16.so.16" ]] && install -m 755 "$runtime_libs/libpng16.so.16" "$app_dist_dir/lib/"
 fi
 
 [[ -f "$icon_src" ]] && install -m 644 "$icon_src" "$app_dist_dir/icon.png"
