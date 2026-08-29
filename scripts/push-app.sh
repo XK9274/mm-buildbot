@@ -3,9 +3,11 @@
 # over SSH, then extracts it there. Generic -- works for any app-dist
 # shape (config.json/launch.sh/icon.png plus whatever bin/lib/res/data
 # subdirectories the app has), not tied to any one package. This device's
-# shell has no scp/sftp and its SD card filesystem doesn't support
-# symlinks, so the tar is built with --dereference and streamed over a
-# plain `ssh ... tar xzf -`.
+# shell has no scp/sftp and its SD card filesystem supports neither
+# symlinks nor hardlinks, so the tar is built with --dereference
+# --hard-dereference (every entry becomes an independent regular file,
+# even when multiple names share an inode, e.g. a lib's SONAME symlinks)
+# and streamed over a plain `ssh ... tar xzf -`.
 #
 # Usage: push-app.sh <local_app_dist_dir> <device_app_name>
 # Env:   MMIYOO_DEVICE_IP/USER/PASS   (defaults: 192.168.1.78/onion/onion)
@@ -30,7 +32,7 @@ log "Pushing $local_dir -> $device_user@$device_ip:$device_dir"
 # different app-dist shape (e.g. fewer probes built this time) would
 # otherwise linger forever and fail the checksum comparison below.
 sshpass -p "$device_pass" ssh "$device_user@$device_ip" "rm -rf '$device_dir' && mkdir -p '$device_dir'"
-tar --dereference -C "$local_dir" -czf - . | \
+tar --dereference --hard-dereference -C "$local_dir" -czf - . | \
   sshpass -p "$device_pass" ssh "$device_user@$device_ip" "tar -xzf - -C '$device_dir'"
 
 # chmod anything that looks executable back to 755 -- tar preserves local
