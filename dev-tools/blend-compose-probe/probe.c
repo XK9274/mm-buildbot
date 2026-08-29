@@ -132,9 +132,24 @@ int main(int argc, char *argv[])
     SDL_DestroyTexture(src_a);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_DestroyTexture(target);
+
+    /* Visual result: top half = Case A (green=PASS/red=FAIL), bottom half = Case B. Held on screen for HOLD_SECONDS before exit. */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    int win_w = 0, win_h = 0;
+    SDL_GetWindowSize(window, &win_w, &win_h);
+    SDL_Rect top = {0, 0, win_w, win_h / 2};
+    SDL_Rect bottom = {0, win_h / 2, win_w, win_h - win_h / 2};
+    SDL_SetRenderDrawColor(renderer, case_a_pass ? 0 : 200, case_a_pass ? 200 : 0, 0, 255);
+    SDL_RenderFillRect(renderer, &top);
+    SDL_SetRenderDrawColor(renderer, rejected ? 0 : 200, rejected ? 200 : 0, 0, 255);
+    SDL_RenderFillRect(renderer, &bottom);
+    SDL_RenderPresent(renderer);
+
+    log_checkpoint("...exiting cleanly");
+#define HOLD_SECONDS 5
+    SDL_Delay(HOLD_SECONDS * 1000);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    log_checkpoint("...exiting cleanly");
     SDL_Quit();
     return 0;
 }

@@ -27,6 +27,13 @@ int main(int argc, char *argv[])
     if (SDL_Init(SDL_INIT_VIDEO) != 0) { log_checkpoint(SDL_GetError()); return 1; }
     log_checkpoint("SDL_Init ok");
 
+    SDL_Window *window = SDL_CreateWindow("probe", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                                           640, 480, SDL_WINDOW_FULLSCREEN);
+    if (!window) { log_checkpoint(SDL_GetError()); return 1; }
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) { log_checkpoint(SDL_GetError()); return 1; }
+    log_checkpoint("SDL_CreateRenderer ok");
+
     SDL_Surface *src = SDL_CreateRGBSurfaceWithFormat(0, GRADIENT_WIDTH, 1, 32, SDL_PIXELFORMAT_ABGR8888);
     if (!src) { log_checkpoint(SDL_GetError()); return 1; }
 
@@ -46,11 +53,14 @@ int main(int argc, char *argv[])
     const int tolerance = 2;
     Uint32 *src_pixels = (Uint32 *)src->pixels;
     Uint32 *dst_pixels = (Uint32 *)dst->pixels;
+    Uint8 sa_vals[GRADIENT_WIDTH], da_vals[GRADIENT_WIDTH];
 
     for (int x = 0; x < GRADIENT_WIDTH; x++) {
         Uint8 sr, sg, sb, sa, dr, dg, db, da;
         SDL_GetRGBA(src_pixels[x], src->format, &sr, &sg, &sb, &sa);
         SDL_GetRGBA(dst_pixels[x], dst->format, &dr, &dg, &db, &da);
+        sa_vals[x] = sa;
+        da_vals[x] = da;
 
         int ok = (abs((int)sa - (int)da) <= tolerance);
         pass_count += ok;
@@ -82,7 +92,27 @@ int main(int argc, char *argv[])
 
     SDL_FreeSurface(src);
     SDL_FreeSurface(dst);
+
+    /* Visual result: top half = source alpha gradient (grayscale), bottom half = destination alpha gradient -- should look identical. Held on screen for HOLD_SECONDS before exit. */
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
+    int win_w = 0, win_h = 0;
+    SDL_GetWindowSize(window, &win_w, &win_h);
+    int strip_w = win_w / GRADIENT_WIDTH;
+    for (int x = 0; x < GRADIENT_WIDTH; x++) {
+        SDL_Rect top = {x * strip_w, 0, strip_w, win_h / 2};
+        SDL_Rect bottom = {x * strip_w, win_h / 2, strip_w, win_h - win_h / 2};
+        SDL_SetRenderDrawColor(renderer, sa_vals[x], sa_vals[x], sa_vals[x], 255);
+        SDL_RenderFillRect(renderer, &top);
+        SDL_SetRenderDrawColor(renderer, da_vals[x], da_vals[x], da_vals[x], 255);
+        SDL_RenderFillRect(renderer, &bottom);
+    }
+    SDL_RenderPresent(renderer);
+
     log_checkpoint("...exiting cleanly");
+#define HOLD_SECONDS 5
+    SDL_Delay(HOLD_SECONDS * 1000);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
     return 0;
 }
