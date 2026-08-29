@@ -64,6 +64,23 @@ if [[ "$has_git_source" != 1 && "$has_archive_source" != 1 ]]; then
   exit 1
 fi
 
+if grep -q '^sdl2_addons:' "$config"; then
+  # shellcheck source=scripts/sdl2-addons.conf.sh
+  source "$script_dir/sdl2-addons.conf.sh"
+  while IFS= read -r component; do
+    [[ -n "$component" ]] || continue
+    valid=0
+    for candidate in "${SDL2_ADDON_ORDER[@]}"; do
+      [[ "$candidate" == "$component" ]] && { valid=1; break; }
+    done
+    if [[ "$valid" != 1 ]]; then
+      printf 'Unknown sdl2_addons component in %s: %s (expected one of: %s)\n' \
+        "$config" "$component" "${SDL2_ADDON_ORDER[*]}" >&2
+      exit 1
+    fi
+  done < <(yaml_list "$config" "sdl2_addons")
+fi
+
 while IFS= read -r dependency; do
   [[ -n "$dependency" ]] || continue
   if [[ "$dependency" == "$package_id" ]]; then
