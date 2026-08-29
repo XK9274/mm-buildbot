@@ -8,7 +8,7 @@ stage_dir="${4:?stage dir required}"
 source "$repo_root/packages/.shared/upstream-port.sh"
 
 dungeonrush_repo="${DUNGEONRUSH_REPO:-https://github.com/XK9274/DungeonRush.git}"
-dungeonrush_ref="${DUNGEONRUSH_REF:-ff44828b2bd89e0edb831673aca64ef4377c0c32}"
+dungeonrush_ref="${DUNGEONRUSH_REF:-master}"
 source_dir="$work_dir/src/dungeonrush"
 build_dir="$work_dir/build"
 game_dir="$stage_dir/Roms/PORTS/Games/DungeonRush"

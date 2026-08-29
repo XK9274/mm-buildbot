@@ -1,10 +1,10 @@
 id: dungeonrush-mmiyoo
 name: DungeonRush for Miyoo Mini family
 modified_source: no
-version: ff44828b2bd89e0edb831673aca64ef4377c0c32
+version: latest
 source:
   repo: https://github.com/XK9274/DungeonRush.git
-  ref: ff44828b2bd89e0edb831673aca64ef4377c0c32
+  ref: master
 depends_on:
   - sdl2-mmiyoo-lib
   - sdl2-mmiyoo-addons
