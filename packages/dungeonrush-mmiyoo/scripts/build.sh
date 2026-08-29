@@ -133,6 +133,9 @@ PerformanceMode=0
 # specific to this port :
 Arguments=""
 
+# temporary: backend blit tracing (fb size + final hw-space coords per draw)
+export SDL_MMIYOO_DEBUG_LOG=1
+
 # running command line :
 /mnt/SDCARD/Emu/PORTS/launch_standalone.sh "$GameName" "$GameDir" "$GameExecutable" "$Arguments" "$GameDataFile" "$KillAudioserver" "$PerformanceMode"
 EOF
