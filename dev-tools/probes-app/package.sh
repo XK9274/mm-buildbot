@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Assembles compiled probe binaries (from build.sh) into an on-device app
-# directory: config.json, icon.png, launch.sh, bin/, lib/, res/. launch.sh
-# runs whichever probe is named in its PROBE= line -- edit that one line
-# (and re-run this script, or edit it directly on-device) to switch probes.
+# directory: config.json, launch.sh, bin/, lib/, res/, plus icon.png if
+# PROBES_APP_ICON points at one (none by default). launch.sh runs whichever
+# probe is named in its PROBE= line -- edit that one line (and re-run this
+# script, or edit it directly on-device) to switch probes.
 # No push -- see ../../scripts/push-app.sh to deploy the result.
 #
 # Usage: package.sh <bin_dir> <app_dist_dir> [label] [default_probe]
@@ -24,7 +25,7 @@ label="${3:-Device Probes}"
 
 sdl2_bundle="${MMIYOO_SDL2_PREFIX:-$repo_root/work/sdl2-mmiyoo-lib/bundle}"
 runtime_libs="${RUNTIME_LIBS_DIR:-$repo_root/work/love-mmiyoo-demo/sysroot-libs}"
-icon_src="${PROBES_APP_ICON:-$repo_root/packages/blobbyvolley2-mmiyoo/templates/BlobbyVolley2/icon.png}"
+icon_src="${PROBES_APP_ICON:-}"
 
 built=()
 for f in "$bin_dir"/*; do
