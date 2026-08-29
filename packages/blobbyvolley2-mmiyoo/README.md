@@ -23,3 +23,7 @@ The engine looks for its data files (`gfx.zip`, `sounds.zip`, `scripts.zip`,
 its own executable before anything else, so the app-dist keeps the `blobby`
 binary and those files flat in the same directory rather than relying on a
 baked-in install prefix.
+
+## Known issues
+
+Input does not currently work on-device.
