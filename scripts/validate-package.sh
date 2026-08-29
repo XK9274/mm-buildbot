@@ -56,11 +56,25 @@ done
 
 has_git_source=0
 has_archive_source=0
+has_local_source=0
 grep -q '^  repo:' "$config" && grep -q '^  ref:' "$config" && has_git_source=1
 grep -q '^  url:' "$config" && grep -q '^  sha256:' "$config" && has_archive_source=1
 
-if [[ "$has_git_source" != 1 && "$has_archive_source" != 1 ]]; then
-  printf 'Package source in %s must provide repo/ref or url/sha256\n' "$config" >&2
+local_manifest="$(awk '
+  $1 == "source:" { in_source = 1; next }
+  in_source && /^[^ ]/ { exit }
+  in_source && $1 == "manifest:" { print $2; exit }
+' "$config")"
+if [[ -n "$local_manifest" ]]; then
+  [[ -f "$root/$local_manifest" ]] || {
+    printf 'Package source manifest not found in %s: %s\n' "$config" "$local_manifest" >&2
+    exit 1
+  }
+  has_local_source=1
+fi
+
+if [[ "$has_git_source" != 1 && "$has_archive_source" != 1 && "$has_local_source" != 1 ]]; then
+  printf 'Package source in %s must provide repo/ref, url/sha256, or a local manifest\n' "$config" >&2
   exit 1
 fi
 
