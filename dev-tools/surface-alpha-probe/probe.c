@@ -1,14 +1,4 @@
-/* Verifies SDL_ConvertSurfaceFormat(ABGR8888 -> RGBA8888) preserves alpha,
- * using only format-aware SDL_GetRGBA reads (never a fixed byte offset).
- *
- * Written to independently re-check a report that this conversion "zeroes
- * every pixel's alpha": tracing SDL_blit_N.c's BlitNtoNCopyAlpha this
- * session found the blit itself correct -- alpha lands at destination byte
- * offset 0, not 3, because SDL_PIXELFORMAT_RGBA8888's real memory order on a
- * little-endian target is A,B,G,R. The likely explanation for the original
- * report is a fixed offset+3 alpha read, which is right for the ABGR8888
- * source but wrong for the RGBA8888 destination -- this probe demonstrates
- * that explicitly in its log. */
+/* Verifies SDL_ConvertSurfaceFormat(ABGR8888 -> RGBA8888) preserves alpha, using only format-aware SDL_GetRGBA reads (never a fixed byte offset). */
 #include <SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -79,8 +69,7 @@ int main(int argc, char *argv[])
         log_checkpoint(msg);
     }
 
-    /* Footgun demonstration: a naive reader assuming byte offset+3 is always
-     * alpha (true for the ABGR8888 source, false for packed32 RGBA8888). */
+    /* A fixed offset+3 read is right for ABGR8888 but wrong for packed32 RGBA8888. */
     for (int x = 0; x < 2; x++) {
         Uint8 *bytes = (Uint8 *)dst->pixels + x * 4;
         char msg[192];

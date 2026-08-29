@@ -1,14 +1,4 @@
-/* Documents which SDL2 pixel formats round-trip correctly through
- * sdl2_miyoo's renderer. Writes a known, channel-distinguishable translucent
- * test color into a texture of each format via that format's own
- * SDL_MapRGBA (format-safe, never a hand-written byte offset), renders and
- * reads it back, and decodes with SDL_GetRGBA.
- *
- * SDL_PIXELFORMAT_RGBA8888 is expected to always FAIL here: MI_GFX has no
- * native format matching its real little-endian memory order (A,B,G,R), so
- * MMIYOO_SDLToMIGfxFormat force-maps it to ARGB8888, swapping R/B. That is a
- * documented, permanent limitation (see docs/MMIYOO_SDL_FEATURE_SUMMARY.md
- * in sdl2_miyoo), not a bug this probe is meant to catch going green. */
+/* Round-trips a known color through each SDL2 pixel format via SDL_RenderCopy on sdl2_miyoo's renderer; a live reference for which formats decode correctly, not an assertion of which ones should. */
 #include <SDL.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -24,13 +14,23 @@ static void log_checkpoint(const char *msg)
     fprintf(stderr, "[probe] %s\n", msg);
 }
 
+/* Reading the default framebuffer target is unsupported by design on this driver (see docs/MMIYOO_SDL_FEATURE_SUMMARY.md), so a target texture is required here. */
 static void test_format(SDL_Renderer *renderer, Uint32 sdl_format, const char *name)
 {
+    SDL_Texture *target = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, 4, 4);
+    if (!target) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "%s: SDL_CreateTexture(TARGET) failed: %s => FAIL", name, SDL_GetError());
+        log_checkpoint(msg);
+        return;
+    }
+
     SDL_Texture *tex = SDL_CreateTexture(renderer, sdl_format, SDL_TEXTUREACCESS_STREAMING, 4, 4);
     if (!tex) {
         char msg[192];
         snprintf(msg, sizeof(msg), "%s: SDL_CreateTexture failed: %s => FAIL", name, SDL_GetError());
         log_checkpoint(msg);
+        SDL_DestroyTexture(target);
         return;
     }
 
@@ -49,11 +49,13 @@ static void test_format(SDL_Renderer *renderer, Uint32 sdl_format, const char *n
     SDL_UnlockTexture(tex);
 
     SDL_SetTextureBlendMode(tex, SDL_BLENDMODE_NONE); /* isolate format mapping from blend math */
+    SDL_SetRenderTarget(renderer, target);
     SDL_RenderCopy(renderer, tex, NULL, NULL);
 
     SDL_Rect one_pixel = {0, 0, 1, 1};
     Uint32 readback = 0;
     SDL_RenderReadPixels(renderer, &one_pixel, SDL_PIXELFORMAT_ARGB8888, &readback, 4);
+    SDL_SetRenderTarget(renderer, NULL);
 
     SDL_PixelFormat *argb_fmt = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
     Uint8 r, g, b, a;
@@ -68,6 +70,7 @@ static void test_format(SDL_Renderer *renderer, Uint32 sdl_format, const char *n
     SDL_FreeFormat(fmt);
     SDL_FreeFormat(argb_fmt);
     SDL_DestroyTexture(tex);
+    SDL_DestroyTexture(target);
 }
 
 int main(int argc, char *argv[])
