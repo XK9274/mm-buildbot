@@ -48,14 +48,19 @@ yaml_value() {
   ' "$file"
 }
 
-package_dependencies() {
+yaml_list() {
   local file="$1"
+  local key="$2"
 
-  awk '
-    $1 == "depends_on:" { in_dependencies = 1; next }
-    in_dependencies && /^[^ ]/ { exit }
-    in_dependencies && $1 == "-" { print $2 }
+  awk -v key="$key" '
+    $1 == key ":" { in_list = 1; next }
+    in_list && /^[^ ]/ { exit }
+    in_list && $1 == "-" { print $2 }
   ' "$file"
+}
+
+package_dependencies() {
+  yaml_list "$1" "depends_on"
 }
 
 create_zip_from_dir() {
