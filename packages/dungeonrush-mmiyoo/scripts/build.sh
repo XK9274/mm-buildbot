@@ -140,5 +140,5 @@ chmod 755 "$stage_dir/Roms/PORTS/Shortcuts/Arcade/DungeonRush.port"
 
 install -m 644 "$repo_root/packages/dungeonrush-mmiyoo/README.md" "$game_dir/README.md"
 
-verify_mmiyoo_runtime_closure "$game_dir"
+verify_mmiyoo_runtime_closure "$game_dir" "$image"
 log "Port staged at $game_dir"
