@@ -40,7 +40,7 @@ for pattern in libSDL2_image*.so* libSDL2_ttf*.so* libSDL2_gfx*.so* libSDL2_mixe
     cp -a "$library" "$bundle_dir/lib/"
   done
 done
-for pc in "$workspace_dir"/build/lib/pkgconfig/SDL2_{image,ttf,mixer,net}.pc; do
+for pc in "$workspace_dir"/build/lib/pkgconfig/SDL2_{image,ttf,gfx,mixer,net}.pc; do
   [[ -f "$pc" ]] || continue
   sed 's|^prefix=.*|prefix=${pcfiledir}/../..|' "$pc" > "$bundle_dir/lib/pkgconfig/$(basename "$pc")"
 done
