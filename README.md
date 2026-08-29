@@ -6,6 +6,10 @@ bundles from upstream source repos.
 This repo owns build recipes, templates, and automation. It does not own the
 upstream application source.
 
+As far as ports are concerned, it currently focuses on SDL2-based source
+ports for the Miyoo Mini family (Mini, Plus, Mini Flip) using my own version
+of SDL2.
+
 > **AI disclosure:** there's been a substantial usage of various LLM in this
 > project to both write the code & maintain the repo itself.
 
@@ -83,7 +87,6 @@ with `scripts/push-app.sh <local_dir> <device_app_name>`.
 </thead>
 <tbody>
 <tr><td><code>downscale-bench-probe</code></td><td>Compares <code>MI_GFX_BitBlit</code>'s implicit hardware scale against the NEON <code>downscale_area_n32</code> fallback across a resolution matrix (800x600 through 1920x1080); each variant's result is rotated 180° and held on-screen with an on-screen banner naming resolution/target/variant.</td><td>Per-frame timing and a final summary table, both to the probe's own <code>probe.log</code> and to <code>launch.sh</code>'s <code>logs/&lt;probe&gt;-&lt;timestamp&gt;.log</code> capture.</td><td><code>PROBE=downscale-bench-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>frames_per_variant</code> (default 150).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>fragmented-composite-probe</code></td><td>Repro matching BlobbyVolley2's real <code>RenderManagerSDL::init()</code>/<code>refresh()</code> window/renderer/viewport sequence exactly, isolating a BV2-only hang from the generic oversized-composite one.</td><td>Checkpoint log to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=fragmented-composite-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>small_count</code> (default 200, textures created before the oversized composite).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
 <tr><td><code>texture-count-probe</code></td><td>Repro for a hang theory tied to BlobbyVolley2's asset loading (many small <code>SDL_CreateTextureFromSurface</code> calls); <code>KEEP_ALIVE</code> toggles whether textures stay live or are destroyed between creates.</td><td>Checkpoint log to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=texture-count-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>KEEP_ALIVE</code> (<code>0</code>/<code>1</code>).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
 <tr><td><code>i2c-tools-mmiyoo</code></td><td>Upstream <code>i2c-tools</code> 4.4 (<code>i2cdetect</code>, <code>i2cdump</code>, <code>i2cget</code>, <code>i2cset</code>, <code>i2ctransfer</code>) for direct I2C bus inspection.</td><td>stdout only, whatever the invoking command captures.</td><td>Invoked directly per-command over SSH.</td><td>Floating tool bundle, no <code>launch.sh</code>/app-dist shape — copy <code>bin/</code> to the device.</td></tr>
 <tr><td><code>strace-mmiyoo</code></td><td>Union-toolchain ARM hard-float build of <code>strace</code> 6.12, for live syscall tracing during a device-hang investigation.</td><td>stdout, or wherever the invoking command redirects it.</td><td>Invoked directly over SSH, typically wrapping another process's launch.</td><td>Floating binary, dynamically linked against the device C library, no private shared-library deps.</td></tr>
