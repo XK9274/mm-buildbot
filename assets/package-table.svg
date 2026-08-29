@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="1100" height="940" viewBox="0 0 1100 940" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="1100" height="1010" viewBox="0 0 1100 1010" role="img" aria-labelledby="title description">
   <title id="title">mm-buildbot package matrix</title>
   <desc id="description">Tracked mm-buildbot packages, native host support, and modified source status</desc>
   <foreignObject width="100%" height="100%">
     <xhtml:div xmlns="http://www.w3.org/1999/xhtml">
       <style>
         * { box-sizing: border-box; }
-        .card { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #dbeafe; background: transparent; padding: 22px; width: 1100px; height: 940px; }
+        .card { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #dbeafe; background: transparent; padding: 22px; width: 1100px; height: 1010px; }
         h1 { font-size: 26px; margin: 0 0 4px; color: #f8fafc; }
         .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 18px; }
         .table { overflow: hidden; }
@@ -58,7 +58,13 @@
   <div class="modified">yes</div>
 </div>
 <div class="row">
-  <div class="identity"><span class="icon empty">—</span><div><strong>sdl2-mmiyoo-addons</strong><span>SDL2 image, TTF, net, and mixer add-ons for MMIYOO SDL2</span></div></div>
+  <div class="identity"><span class="icon empty">—</span><div><strong>sdl2-benchmarks-mmiyoo</strong><span>Miyoo SDL2 Benchmarks</span></div></div>
+  <div class="kind">app dist</div>
+  <div class="native">—</div>
+  <div class="modified">no</div>
+</div>
+<div class="row">
+  <div class="identity"><span class="icon empty">—</span><div><strong>sdl2-mmiyoo-addons</strong><span>SDL2 image, TTF, gfx, net, and mixer add-ons for MMIYOO SDL2</span></div></div>
   <div class="kind">tool bundle</div>
   <div class="native">—</div>
   <div class="modified">no</div>
