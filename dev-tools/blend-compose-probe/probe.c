@@ -1,39 +1,9 @@
-/* Exercises sdl2_miyoo's composed-blend-mode translation in GFX_Copy
- * (src/video/mmiyoo/SDL_video_mmiyoo_gfx.c).
- *
- * Case A: a genuinely representable composed mode --
- * SDL_ComposeCustomBlendMode(ZERO, ONE, ADD, ZERO, ONE, ADD), i.e. "keep the
- * destination, ignore the source" on all 4 channels equally. Matching
- * color/alpha factors is exactly what MI_GFX's single (eSrcDfbBldOp,
- * eDstDfbBldOp) pair can represent -- this is not one of SDL's 4 named
- * short constants, so it only reaches the new translation path, not an
- * existing hardcoded case. Draws it over a known destination color with a
- * different source color; if the translation is wired correctly the
- * destination must come back completely unchanged (the old SRCALPHA/
- * INVSRCALPHA fallback would visibly blend the new color in instead).
- *
- * Case B: the *exact* mode from the original bug report --
- * SDL_ComposeCustomBlendMode(ONE, ZERO, ADD, ZERO, ONE, ADD), used by
- * syncthing-app-miyoo to replace destination RGB while preserving
- * destination alpha. Decomposed, its color factors (ONE, ZERO) don't match
- * its alpha factors (ZERO, ONE) -- MI_GFX applies one factor pair
- * uniformly across all 4 channels, so this specific mode is NOT
- * representable on this hardware, translation or not. This case confirms
- * that instead of the old silent mis-blend, it now falls back cleanly
- * (no crash) and fires the driver's one-time warning -- captured here via
- * a custom SDL_LogOutputFunction. The original app's need (replace RGB,
- * keep alpha, in one hardware blit) genuinely has no representation here;
- * an app hitting this must composite it another way (e.g. CPU-side). */
+/* Exercises sdl2_miyoo's composed-blend-mode support (MMIYOO_SupportsBlendMode + GFX_Copy's translation) via SDL_RenderCopy, the only draw path that reaches GFX_Copy on this driver -- SDL_RenderFillRect/RenderClear always use an opaque QuickFill that ignores blend mode entirely. */
 #include <SDL.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 #define TEX_SIZE 64
-
-static SDL_LogOutputFunction g_prev_log_fn;
-static void *g_prev_log_userdata;
-static int g_saw_fallback_warning = 0;
 
 static void log_checkpoint(const char *msg)
 {
@@ -46,19 +16,29 @@ static void log_checkpoint(const char *msg)
     fprintf(stderr, "[probe] %s\n", msg);
 }
 
-static void capture_log(void *userdata, int category, SDL_LogPriority priority, const char *message)
+static SDL_Texture *make_solid_texture(SDL_Renderer *renderer, Uint8 r, Uint8 g, Uint8 b, Uint8 a)
 {
-    if (category == SDL_LOG_CATEGORY_RENDER && priority >= SDL_LOG_PRIORITY_WARN) {
-        char msg[256];
-        snprintf(msg, sizeof(msg), "[sdl-log] %s", message);
-        log_checkpoint(msg);
-        if (strstr(message, "not representable on MI_GFX") != NULL) {
-            g_saw_fallback_warning = 1;
+    SDL_Texture *tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+                                          TEX_SIZE, TEX_SIZE);
+    if (!tex) {
+        return NULL;
+    }
+
+    SDL_PixelFormat *fmt = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
+    Uint32 color = SDL_MapRGBA(fmt, r, g, b, a);
+    SDL_FreeFormat(fmt);
+
+    void *pixels;
+    int pitch;
+    SDL_LockTexture(tex, NULL, &pixels, &pitch);
+    for (int y = 0; y < TEX_SIZE; y++) {
+        Uint32 *row = (Uint32 *)((Uint8 *)pixels + y * pitch);
+        for (int x = 0; x < TEX_SIZE; x++) {
+            row[x] = color;
         }
     }
-    if (g_prev_log_fn) {
-        g_prev_log_fn(g_prev_log_userdata, category, priority, message);
-    }
+    SDL_UnlockTexture(tex);
+    return tex;
 }
 
 int main(int argc, char *argv[])
@@ -67,9 +47,6 @@ int main(int argc, char *argv[])
     (void)argv;
     remove("probe.log");
     log_checkpoint("start");
-
-    SDL_LogGetOutputFunction(&g_prev_log_fn, &g_prev_log_userdata);
-    SDL_LogSetOutputFunction(capture_log, NULL);
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) { log_checkpoint(SDL_GetError()); return 1; }
     log_checkpoint("SDL_Init ok");
@@ -85,23 +62,37 @@ int main(int argc, char *argv[])
     SDL_Texture *target = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
                                              SDL_TEXTUREACCESS_TARGET, TEX_SIZE, TEX_SIZE);
     if (!target) { log_checkpoint(SDL_GetError()); return 1; }
+    log_checkpoint("SDL_CreateTexture(TARGET) ok");
 
-    /* --- Case A: representable composed mode ("keep destination") --- */
+    if (SDL_SetRenderTarget(renderer, target) != 0) { log_checkpoint(SDL_GetError()); return 1; }
+    if (SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE) != 0) { log_checkpoint(SDL_GetError()); return 1; }
+    if (SDL_SetRenderDrawColor(renderer, 10, 20, 30, 200) != 0) { log_checkpoint(SDL_GetError()); return 1; } /* known destination color/alpha */
+    if (SDL_RenderClear(renderer) != 0) { log_checkpoint(SDL_GetError()); return 1; }
+    log_checkpoint("target cleared to (10,20,30,200)");
+
+    /* --- Case A: representable composed mode ("keep destination, ignore source") --- */
     SDL_BlendMode keep_dest_mode = SDL_ComposeCustomBlendMode(
         SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD,
         SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD);
 
-    SDL_SetRenderTarget(renderer, target);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    SDL_SetRenderDrawColor(renderer, 10, 20, 30, 200); /* known destination color/alpha */
-    SDL_RenderClear(renderer);
+    SDL_Texture *src_a = make_solid_texture(renderer, 200, 100, 50, 128);
+    if (!src_a) { log_checkpoint(SDL_GetError()); return 1; }
 
-    SDL_SetRenderDrawBlendMode(renderer, keep_dest_mode);
-    SDL_SetRenderDrawColor(renderer, 200, 100, 50, 128); /* must have zero effect under this mode */
-    SDL_RenderFillRect(renderer, NULL);
+    if (SDL_SetTextureBlendMode(src_a, keep_dest_mode) != 0) {
+        char msg[192];
+        snprintf(msg, sizeof(msg), "CASE A: SDL_SetTextureBlendMode unexpectedly rejected a representable mode: %s => FAIL",
+                 SDL_GetError());
+        log_checkpoint(msg);
+        return 1;
+    }
+    log_checkpoint("CASE A: SDL_SetTextureBlendMode accepted (as expected)");
 
+    if (SDL_RenderCopy(renderer, src_a, NULL, NULL) != 0) { log_checkpoint(SDL_GetError()); return 1; }
+    log_checkpoint("CASE A: SDL_RenderCopy ok");
+
+    SDL_Rect one_pixel = {0, 0, 1, 1};
     Uint32 pixel = 0;
-    if (SDL_RenderReadPixels(renderer, NULL, SDL_PIXELFORMAT_ARGB8888, &pixel, TEX_SIZE * 4) != 0) {
+    if (SDL_RenderReadPixels(renderer, &one_pixel, SDL_PIXELFORMAT_ARGB8888, &pixel, 4) != 0) {
         log_checkpoint(SDL_GetError());
         return 1;
     }
@@ -120,21 +111,25 @@ int main(int argc, char *argv[])
         log_checkpoint(msg);
     }
 
-    /* --- Case B: the original bug report's mode, confirmed unrepresentable --- */
+    /* --- Case B: the exact mode from the original bug report -- confirmed unrepresentable --- */
     SDL_BlendMode replace_rgb_keep_alpha_mode = SDL_ComposeCustomBlendMode(
         SDL_BLENDFACTOR_ONE, SDL_BLENDFACTOR_ZERO, SDL_BLENDOPERATION_ADD,
         SDL_BLENDFACTOR_ZERO, SDL_BLENDFACTOR_ONE, SDL_BLENDOPERATION_ADD);
-    SDL_SetRenderDrawBlendMode(renderer, replace_rgb_keep_alpha_mode);
-    SDL_SetRenderDrawColor(renderer, 1, 2, 3, 4);
-    SDL_RenderFillRect(renderer, NULL); /* must not crash */
-    log_checkpoint("original-bug-report-mode draw completed without crash");
 
+    SDL_Texture *src_b = make_solid_texture(renderer, 1, 2, 3, 4);
+    if (!src_b) { log_checkpoint(SDL_GetError()); return 1; }
+
+    int rejected = (SDL_SetTextureBlendMode(src_b, replace_rgb_keep_alpha_mode) != 0);
     {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "CASE B: fallback warning seen=%s", g_saw_fallback_warning ? "yes" : "no");
+        char msg[192];
+        snprintf(msg, sizeof(msg),
+                 "CASE B: SDL_SetTextureBlendMode on the original bug-report mode was %s (error: %s) => %s",
+                 rejected ? "rejected" : "accepted", SDL_GetError(), rejected ? "PASS" : "FAIL");
         log_checkpoint(msg);
     }
 
+    SDL_DestroyTexture(src_b);
+    SDL_DestroyTexture(src_a);
     SDL_SetRenderTarget(renderer, NULL);
     SDL_DestroyTexture(target);
     SDL_DestroyRenderer(renderer);
