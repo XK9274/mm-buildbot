@@ -1,0 +1,16 @@
+id: sdl2-mmiyoo-bundle-nogl
+name: MMIYOO SDL2 core + TTF/image add-ons bundle (no GLES)
+modified_source: no
+source:
+  manifest: scripts/sdl2-addons.conf.sh
+depends_on:
+  - sdl2-mmiyoo-lib
+  - sdl2-mmiyoo-addons
+sdl2_gles: no
+sdl2_addons:
+  - ttf
+  - image
+build_all: false
+artifact:
+  type: tool_bundle
+  output_name: sdl2-mmiyoo-bundle-nogl
