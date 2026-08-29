@@ -20,6 +20,7 @@ mkdir -p "$workspace_dir"
 docker run --rm --user root -e HOME=/root \
   -e BUILDBOT_UID="$(id -u)" \
   -e BUILDBOT_GID="$(id -g)" \
+  -e NPROC="${NPROC:-}" \
   -v "$workspace_dir":/workspace \
   -v "$script":/opt/buildbot/mksdl2.sh:ro \
   -v "$MMIYOO_SDL2_PREFIX":/opt/mmiyoo-sdl2:ro \
@@ -33,7 +34,7 @@ docker run --rm --user root -e HOME=/root \
 
 mkdir -p "$bundle_dir/lib" "$bundle_dir/include" "$bundle_dir/lib/pkgconfig"
 cp -a "$workspace_dir/build/include/." "$bundle_dir/include/"
-for pattern in libSDL2_image*.so* libSDL2_ttf*.so* libSDL2_mixer*.so* libSDL2_net*.so*; do
+for pattern in libSDL2_image*.so* libSDL2_ttf*.so* libSDL2_gfx*.so* libSDL2_mixer*.so* libSDL2_net*.so*; do
   for library in "$workspace_dir"/build/lib/$pattern; do
     [[ -e "$library" || -L "$library" ]] || continue
     cp -a "$library" "$bundle_dir/lib/"

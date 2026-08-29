@@ -5,7 +5,7 @@ set -euo pipefail
 # Buildbot SDL policy
 # -------------------
 # This is the canonical shared copy of mksdl2.sh.  It builds SDL2's
-# companion libraries (SDL2_image, SDL2_ttf, SDL2_net, and SDL2_mixer) and
+# companion libraries (SDL2_image, SDL2_ttf, SDL2_gfx, SDL2_net, and SDL2_mixer) and
 # their headers/pkg-config metadata for the Miyoo toolchain.
 #
 # The primary libSDL2 implementation comes from the `sdl2_miyoo` repository,
@@ -46,12 +46,14 @@ LDFLAGS=${LDFLAGS:-"-L${FIN_BIN_DIR}/lib -L${SYSROOT}/lib -L${SYSROOT}/usr/lib"}
 STAMP_DIR="$WORKSPACE/cache"
 LOG_DIR="$WORKSPACE/logs"
 EMPTY_PKGCONFIG_DIR="$STAMP_DIR/pkgconfig-null"
-if command -v nproc >/dev/null 2>&1; then
-  NPROC=$(nproc)
-else
-  NPROC=2
+if [[ -z "${NPROC:-}" ]]; then
+  if command -v nproc >/dev/null 2>&1; then
+    NPROC=$(nproc)
+  else
+    NPROC=2
+  fi
+  NPROC=$((NPROC - 1))
 fi
-NPROC=$((NPROC - 1))
 [[ $NPROC -lt 1 ]] && NPROC=1
 
 mkdir -p "$LOG_DIR" "$STAMP_DIR" "$FIN_BIN_DIR" "$EMPTY_PKGCONFIG_DIR"
@@ -136,24 +138,25 @@ check_dev_tools() {
 }
 
 download_sources() {
-  local urls=(
-    "https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-2.6.3.tar.gz"
-    "https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2.tar.gz"
-    "https://github.com/libsdl-org/SDL_net/releases/download/release-2.2.0/SDL2_net-2.2.0.tar.gz"
-    "https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.6.3/SDL2_mixer-2.6.3.tar.gz"
+  local sources=(
+    "SDL2_image-2.6.3.tar.gz|https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-2.6.3.tar.gz"
+    "SDL2_ttf-2.20.2.tar.gz|https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2.tar.gz"
+    "SDL2_gfx-1.0.4.tar.gz|https://sourceforge.net/projects/sdl2gfx/files/SDL2_gfx-1.0.4.tar.gz/download"
+    "SDL2_net-2.2.0.tar.gz|https://github.com/libsdl-org/SDL_net/releases/download/release-2.2.0/SDL2_net-2.2.0.tar.gz"
+    "SDL2_mixer-2.6.3.tar.gz|https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.6.3/SDL2_mixer-2.6.3.tar.gz"
   )
   if [[ "${SDL2_SKIP_CORE:-0}" != 1 ]]; then
-    urls=("https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-2.26.5.tar.gz" "${urls[@]}")
+    sources=("SDL2-2.26.5.tar.gz|https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-2.26.5.tar.gz" "${sources[@]}")
   fi
 
-  for url in "${urls[@]}"; do
-    local file
-    file=$(basename "$url")
+  for source in "${sources[@]}"; do
+    local file="${source%%|*}"
+    local url="${source#*|}"
     if [ -f "$file" ]; then
       continue
     fi
     echo "Downloading $file..."
-    wget -q "$url"
+    wget -q -O "$file" "$url"
   done
 }
 
@@ -209,6 +212,7 @@ main() {
   fi
 
   export SDL2_CONFIG="$FIN_BIN_DIR/bin/sdl2-config"
+  export SDL_CONFIG="$FIN_BIN_DIR/bin/sdl2-config"
   export PATH="$FIN_BIN_DIR/bin:$PATH"
   if [ -n "$PKG_CONFIG_LIBDIR" ]; then
     export PKG_CONFIG_LIBDIR="$FIN_BIN_DIR/lib/pkgconfig:$FIN_BIN_DIR/share/pkgconfig:$PKG_CONFIG_LIBDIR"
@@ -223,6 +227,10 @@ main() {
     CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
     --enable-stb-image --disable-avif --disable-jxl --disable-libpng --disable-libtiff \
     --disable-libwebp --disable-webpdecoder --disable-jpg --disable-tif
+
+  build_tarball "SDL2_gfx" "SDL2_gfx-1.0.4.tar.gz" "SDL2_gfx-1.0.4" \
+    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
+    --disable-mmx
 
   build_tarball "SDL2_net" "SDL2_net-2.2.0.tar.gz" "SDL2_net-2.2.0" \
     CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \

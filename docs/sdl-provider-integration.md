@@ -6,13 +6,14 @@ clone of `sdl2_miyoo` (`package.yml`'s `source.repo`/`ref`, currently
 `sdl2-config`, `libSDL2-2.0.so.0`, EGL, GLESv2, and the Neon helper.
 
 `sdl2-mmiyoo-addons` runs the canonical buildbot copy of `mksdl2.sh` with
-`SDL2_SKIP_CORE=1`. It provides Image, TTF, Net, and Mixer while linking against
+`SDL2_SKIP_CORE=1`. It provides Image, TTF, Gfx, Net, and Mixer while linking against
 that core provider. It never compiles stock SDL2.
 
 ## Consumer audit
 
 | recipe | core SDL2 | add-ons | runtime handling |
 | --- | --- | --- | --- |
+| `sdl2-benchmarks-mmiyoo` | yes | Image/TTF/gfx | Builds the eight benchmark binaries against both shared providers and stages the complete runtime closure. |
 | `retroarch-mmiyoo-sdl2-gl` | yes | no | Links and stages the core runtime from `sdl2-mmiyoo-lib`. |
 | `yorisoft-pokedex` | yes | Image/TTF/Net/Mixer | Stages the core and required add-ons from their providers. |
 | `love-mmiyoo-demo` | yes | no | Its local build hook installs the provider; it does not invoke `mk_mmiyoo.sh`. |

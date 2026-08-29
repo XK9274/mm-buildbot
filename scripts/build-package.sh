@@ -31,24 +31,46 @@ export BUILDBOT_PACKAGE_STACK="${BUILDBOT_PACKAGE_STACK:+$BUILDBOT_PACKAGE_STACK
 
 while IFS= read -r dependency; do
   [[ -n "$dependency" ]] || continue
-  dependency_marker="$BUILDBOT_SESSION_DIR/$dependency.complete"
-  if [[ ! -f "$dependency_marker" ]]; then
-    if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
-      # Let the consumer opt out of GLES (e.g. an app with no GL/EGL symbols).
-      sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
-      if [[ "$sdl2_gles" == "no" ]]; then
-        export SDL2_MIYOO_ENABLE_GLES=0
+  dependency_prefix=""
+  use_external_dependency=0
+  case "$dependency" in
+    sdl2-mmiyoo-lib)
+      dependency_prefix="${MMIYOO_SDL2_PREFIX:-}"
+      [[ -n "$dependency_prefix" ]] && use_external_dependency=1
+      ;;
+    sdl2-mmiyoo-addons)
+      dependency_prefix="${MMIYOO_SDL2_ADDONS_PREFIX:-}"
+      [[ -n "$dependency_prefix" ]] && use_external_dependency=1
+      ;;
+  esac
+
+  if (( use_external_dependency )); then
+    [[ -d "$dependency_prefix" ]] || {
+      printf 'External dependency prefix is not a directory for %s: %s\n' "$dependency" "$dependency_prefix" >&2
+      exit 1
+    }
+    printf 'Using external dependency prefix for %s: %s\n' "$dependency" "$dependency_prefix"
+  else
+    dependency_prefix="$root/work/$dependency/bundle"
+    dependency_marker="$BUILDBOT_SESSION_DIR/$dependency.complete"
+    if [[ ! -f "$dependency_marker" ]]; then
+      if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
+        # Let the consumer opt out of GLES (e.g. an app with no GL/EGL symbols).
+        sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
+        if [[ "$sdl2_gles" == "no" ]]; then
+          export SDL2_MIYOO_ENABLE_GLES=0
+        fi
       fi
+      "$script_dir/build-package.sh" "$dependency"
     fi
-    "$script_dir/build-package.sh" "$dependency"
   fi
   dependency_var="PACKAGE_DEPENDENCY_${dependency//-/_}"
-  export "$dependency_var=$root/work/$dependency/bundle"
+  export "$dependency_var=$dependency_prefix"
   if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
-    export MMIYOO_SDL2_PREFIX="$root/work/$dependency/bundle"
+    export MMIYOO_SDL2_PREFIX="$dependency_prefix"
   fi
   if [[ "$dependency" == "sdl2-mmiyoo-addons" ]]; then
-    export MMIYOO_SDL2_ADDONS_PREFIX="$root/work/$dependency/bundle"
+    export MMIYOO_SDL2_ADDONS_PREFIX="$dependency_prefix"
   fi
 done < <(package_dependencies "$config")
 
