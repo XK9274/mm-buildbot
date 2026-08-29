@@ -8,6 +8,8 @@ source:
 depends_on:
   - sdl2-mmiyoo-lib
   - sdl2-mmiyoo-addons
+sdl2_addons:
+  - mixer
 sdl2_gles: no
 build_all: false
 artifact:

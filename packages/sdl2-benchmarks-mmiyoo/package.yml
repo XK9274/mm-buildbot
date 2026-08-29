@@ -8,6 +8,10 @@ source:
 depends_on:
   - sdl2-mmiyoo-lib
   - sdl2-mmiyoo-addons
+sdl2_addons:
+  - image
+  - ttf
+  - gfx
 build_all: false
 app_dist:
   template: packages/sdl2-benchmarks-mmiyoo/templates

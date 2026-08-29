@@ -9,6 +9,7 @@ source "$repo_root/packages/.shared/upstream-port.sh"
 
 workspace_dir="$work_dir/mksdl2-workspace"
 script="$repo_root/scripts/mksdl2.sh"
+addons_conf="$repo_root/scripts/sdl2-addons.conf.sh"
 
 require_mmiyoo_sdl_provider
 image="$(ensure_union_toolchain_image)"
@@ -21,8 +22,10 @@ docker run --rm --user root -e HOME=/root \
   -e BUILDBOT_UID="$(id -u)" \
   -e BUILDBOT_GID="$(id -g)" \
   -e NPROC="${NPROC:-}" \
+  -e SDL2_ADDONS="${SDL2_ADDONS:-all}" \
   -v "$workspace_dir":/workspace \
   -v "$script":/opt/buildbot/mksdl2.sh:ro \
+  -v "$addons_conf":/opt/buildbot/sdl2-addons.conf.sh:ro \
   -v "$MMIYOO_SDL2_PREFIX":/opt/mmiyoo-sdl2:ro \
   --workdir /workspace "$image" bash -lc '
     set -e
@@ -40,7 +43,7 @@ for pattern in libSDL2_image*.so* libSDL2_ttf*.so* libSDL2_gfx*.so* libSDL2_mixe
     cp -a "$library" "$bundle_dir/lib/"
   done
 done
-for pc in "$workspace_dir"/build/lib/pkgconfig/SDL2_{image,ttf,mixer,net}.pc; do
+for pc in "$workspace_dir"/build/lib/pkgconfig/SDL2_{image,ttf,gfx,mixer,net}.pc; do
   [[ -f "$pc" ]] || continue
   sed 's|^prefix=.*|prefix=${pcfiledir}/../..|' "$pc" > "$bundle_dir/lib/pkgconfig/$(basename "$pc")"
 done

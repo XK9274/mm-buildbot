@@ -13,6 +13,14 @@ set -euo pipefail
 # SDL2_SKIP_CORE=1 after installing that provider at SDL2_PREFIX; in that mode
 # this script neither downloads nor compiles the stock SDL2 core.  Running
 # without SDL2_SKIP_CORE retains the standalone, upstream-compatible behavior.
+#
+# SDL2_ADDONS selects which companion libraries to build, e.g.
+# SDL2_ADDONS="image ttf gfx"; unset or "all" builds every component listed
+# in sdl2-addons.conf.sh.
+
+MKSDL2_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/sdl2-addons.conf.sh
+source "$MKSDL2_DIR/sdl2-addons.conf.sh"
 
 SCRIPT_DIR=$(pwd -P)
 WORKSPACE=${WORKSPACE:-$SCRIPT_DIR}
@@ -138,13 +146,13 @@ check_dev_tools() {
 }
 
 download_sources() {
-  local sources=(
-    "SDL2_image-2.6.3.tar.gz|https://github.com/libsdl-org/SDL_image/releases/download/release-2.6.3/SDL2_image-2.6.3.tar.gz"
-    "SDL2_ttf-2.20.2.tar.gz|https://github.com/libsdl-org/SDL_ttf/releases/download/release-2.20.2/SDL2_ttf-2.20.2.tar.gz"
-    "SDL2_gfx-1.0.4.tar.gz|https://sourceforge.net/projects/sdl2gfx/files/SDL2_gfx-1.0.4.tar.gz/download"
-    "SDL2_net-2.2.0.tar.gz|https://github.com/libsdl-org/SDL_net/releases/download/release-2.2.0/SDL2_net-2.2.0.tar.gz"
-    "SDL2_mixer-2.6.3.tar.gz|https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.6.3/SDL2_mixer-2.6.3.tar.gz"
-  )
+  local sources=()
+  local name var_tarball var_url
+  for name in "${SELECTED_ADDONS[@]}"; do
+    var_tarball="SDL2_ADDON_${name}_TARBALL"
+    var_url="SDL2_ADDON_${name}_URL"
+    sources+=("${!var_tarball}|${!var_url}")
+  done
   if [[ "${SDL2_SKIP_CORE:-0}" != 1 ]]; then
     sources=("SDL2-2.26.5.tar.gz|https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-2.26.5.tar.gz" "${sources[@]}")
   fi
@@ -166,6 +174,27 @@ run_logged() {
   local log_file="$LOG_DIR/$log_name.log"
   echo "[RUN] $*" | tee -a "$log_file"
   "$@" 2>&1 | tee -a "$log_file"
+}
+
+resolve_selected_addons() {
+  local requested="${SDL2_ADDONS:-all}"
+  if [[ -z "$requested" || "$requested" == "all" ]]; then
+    printf '%s\n' "${SDL2_ADDON_ORDER[@]}"
+    return
+  fi
+  local name candidate found
+  for name in $requested; do
+    found=0
+    for candidate in "${SDL2_ADDON_ORDER[@]}"; do
+      [[ "$candidate" == "$name" ]] && { found=1; break; }
+    done
+    [[ "$found" == 1 ]] || {
+      printf 'Unknown SDL2_ADDONS component: %s (expected one of: %s)\n' \
+        "$name" "${SDL2_ADDON_ORDER[*]}" >&2
+      exit 1
+    }
+    printf '%s\n' "$name"
+  done
 }
 
 build_tarball() {
@@ -191,6 +220,8 @@ build_tarball() {
 
 main() {
   cd "$WORKSPACE"
+  mapfile -t SELECTED_ADDONS < <(resolve_selected_addons)
+  echo "Building SDL2 add-ons: ${SELECTED_ADDONS[*]}"
   check_dev_tools
   download_sources
 
@@ -220,24 +251,15 @@ main() {
     export PKG_CONFIG_LIBDIR="$FIN_BIN_DIR/lib/pkgconfig:$FIN_BIN_DIR/share/pkgconfig"
   fi
 
-  build_tarball "SDL2_ttf" "SDL2_ttf-2.20.2.tar.gz" "SDL2_ttf-2.20.2" \
-    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR"
-
-  build_tarball "SDL2_image" "SDL2_image-2.6.3.tar.gz" "SDL2_image-2.6.3" \
-    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
-    --enable-stb-image --disable-avif --disable-jxl --disable-libpng --disable-libtiff \
-    --disable-libwebp --disable-webpdecoder --disable-jpg --disable-tif
-
-  build_tarball "SDL2_gfx" "SDL2_gfx-1.0.4.tar.gz" "SDL2_gfx-1.0.4" \
-    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
-    --disable-mmx
-
-  build_tarball "SDL2_net" "SDL2_net-2.2.0.tar.gz" "SDL2_net-2.2.0" \
-    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
-    --disable-examples
-
-  build_tarball "SDL2_mixer" "SDL2_mixer-2.6.3.tar.gz" "SDL2_mixer-2.6.3" \
-    CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR"
+  local name var_tarball var_dir
+  for name in "${SELECTED_ADDONS[@]}"; do
+    var_tarball="SDL2_ADDON_${name}_TARBALL"
+    var_dir="SDL2_ADDON_${name}_DIR"
+    local -n addon_args="SDL2_ADDON_${name}_ARGS"
+    build_tarball "SDL2_${name}" "${!var_tarball}" "${!var_dir}" \
+      CC=$CC --host=$HOST --build=$BUILD --prefix="$FIN_BIN_DIR" \
+      "${addon_args[@]}"
+  done
 
   echo "SDL2 build artifacts installed to $FIN_BIN_DIR"
 }

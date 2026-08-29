@@ -20,6 +20,15 @@ mkdir -p "$BUILDBOT_SESSION_DIR"
 
 "$script_dir/validate-package.sh" "$package_id"
 
+sdl2_addons_union() {
+  local a="$1" b="$2"
+  if [[ "$a" == "all" || "$b" == "all" ]]; then
+    printf 'all'
+    return
+  fi
+  printf '%s %s\n' "$a" "$b" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//'
+}
+
 # Build dependencies first.  Recipes consume their staged bundle through a
 # stable prefix instead of assuming host-installed SDL headers or libraries.
 dependency_stack=":${BUILDBOT_PACKAGE_STACK:-}:"
@@ -53,7 +62,23 @@ while IFS= read -r dependency; do
   else
     dependency_prefix="$root/work/$dependency/bundle"
     dependency_marker="$BUILDBOT_SESSION_DIR/$dependency.complete"
-    if [[ ! -f "$dependency_marker" ]]; then
+    if [[ "$dependency" == "sdl2-mmiyoo-addons" ]]; then
+      # Each consumer declares the subset of addon components it links
+      # against; the addons build covers the union requested so far this
+      # session, rebuilding once if a later consumer needs more than an
+      # earlier one did.
+      requested_addons="$(yaml_list "$config" "sdl2_addons" | tr '\n' ' ')"
+      requested_addons="${requested_addons:-all}"
+      selection_file="$BUILDBOT_SESSION_DIR/sdl2-mmiyoo-addons.selection"
+      previous_selection=""
+      [[ -f "$selection_file" ]] && previous_selection="$(cat "$selection_file")"
+      union_selection="$(sdl2_addons_union "$previous_selection" "$requested_addons")"
+      if [[ ! -f "$dependency_marker" || "$union_selection" != "$previous_selection" ]]; then
+        rm -f "$dependency_marker"
+        printf '%s' "$union_selection" >"$selection_file"
+        SDL2_ADDONS="$union_selection" "$script_dir/build-package.sh" "$dependency"
+      fi
+    elif [[ ! -f "$dependency_marker" ]]; then
       if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
         # Let the consumer opt out of GLES (e.g. an app with no GL/EGL symbols).
         sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
