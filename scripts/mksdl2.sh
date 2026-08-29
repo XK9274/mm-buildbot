@@ -172,6 +172,27 @@ run_logged() {
   "$@" 2>&1 | tee -a "$log_file"
 }
 
+resolve_selected_addons() {
+  local requested="${SDL2_ADDONS:-all}"
+  if [[ -z "$requested" || "$requested" == "all" ]]; then
+    printf '%s\n' "${SDL2_ADDON_ORDER[@]}"
+    return
+  fi
+  local name candidate found
+  for name in $requested; do
+    found=0
+    for candidate in "${SDL2_ADDON_ORDER[@]}"; do
+      [[ "$candidate" == "$name" ]] && { found=1; break; }
+    done
+    [[ "$found" == 1 ]] || {
+      printf 'Unknown SDL2_ADDONS component: %s (expected one of: %s)\n' \
+        "$name" "${SDL2_ADDON_ORDER[*]}" >&2
+      exit 1
+    }
+    printf '%s\n' "$name"
+  done
+}
+
 build_tarball() {
   local name=$1
   local tarball=$2
@@ -195,7 +216,8 @@ build_tarball() {
 
 main() {
   cd "$WORKSPACE"
-  SELECTED_ADDONS=("${SDL2_ADDON_ORDER[@]}")
+  mapfile -t SELECTED_ADDONS < <(resolve_selected_addons)
+  echo "Building SDL2 add-ons: ${SELECTED_ADDONS[*]}"
   check_dev_tools
   download_sources
 
