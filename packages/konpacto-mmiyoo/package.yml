@@ -1,6 +1,6 @@
 id: konpacto-mmiyoo
 name: Konpacto FM Macro Tracker
-modified_source: yes
+modified_source: no
 version: 2d196a918bcd8311f57b46e75d60a390f0464701
 source:
   repo: https://github.com/wapordev/konpacto.git
