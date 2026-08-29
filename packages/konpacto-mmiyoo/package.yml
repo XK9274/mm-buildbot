@@ -8,6 +8,9 @@ source:
 depends_on:
   - sdl2-mmiyoo-lib
   - sdl2-mmiyoo-addons
+sdl2_addons:
+  - image
+  - mixer
 build_all: false
 host:
   build_system: make
