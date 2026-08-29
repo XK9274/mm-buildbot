@@ -13,6 +13,10 @@ set -euo pipefail
 # SDL2_SKIP_CORE=1 after installing that provider at SDL2_PREFIX; in that mode
 # this script neither downloads nor compiles the stock SDL2 core.  Running
 # without SDL2_SKIP_CORE retains the standalone, upstream-compatible behavior.
+#
+# SDL2_ADDONS selects which companion libraries to build, e.g.
+# SDL2_ADDONS="image ttf gfx"; unset or "all" builds every component listed
+# in sdl2-addons.conf.sh.
 
 MKSDL2_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/sdl2-addons.conf.sh
