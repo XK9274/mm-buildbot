@@ -105,6 +105,7 @@ expected_binaries=(
   sdl2_audio_bench
   sdl2_sprite_bench
   sdl2_gfx_bench
+  sdl2_obj_model_loader
 )
 
 for binary in "${expected_binaries[@]}"; do
