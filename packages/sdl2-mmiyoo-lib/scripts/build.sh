@@ -10,6 +10,8 @@ source "$repo_root/packages/.shared/upstream-port.sh"
 sdl_repo="${SDL2_MIYOO_REPO:-https://github.com/XK9274/sdl2_miyoo.git}"
 sdl_ref="${SDL2_MIYOO_REF:-main}"
 sdl_dir="$work_dir/src/sdl2_miyoo"
+# Local-only override: copies working-tree bytes as-is (cp -a), no commit/push needed.
+sdl_local_repo="${SDL2_MIYOO_LOCAL_REPO:-}"
 enable_gles="${SDL2_MIYOO_ENABLE_GLES:-1}"
 # Local-only override for testing a neon-arm-library-miyoo branch that hasn't
 # been pushed to the real remote yet -- mounted read-only into the container
@@ -54,15 +56,25 @@ stage_headers() {
 
 mkdir -p "$work_dir/src" "$bundle_dir/bin" "$bundle_dir/lib" "$bundle_dir/include" "$bundle_dir/lib/pkgconfig"
 
-require_tool git
-if [[ ! -d "$sdl_dir/.git" ]]; then
-  log "Cloning SDL2 from $sdl_repo ($sdl_ref)"
-  git clone "$sdl_repo" "$sdl_dir"
-  git -C "$sdl_dir" checkout --detach "$sdl_ref"
+if [[ -n "$sdl_local_repo" ]]; then
+  [[ -d "$sdl_local_repo" ]] || {
+    printf 'SDL2_MIYOO_LOCAL_REPO is not a directory: %s\n' "$sdl_local_repo" >&2
+    exit 1
+  }
+  log "Copying local sdl2_miyoo checkout from $sdl_local_repo"
+  mkdir -p "$sdl_dir"
+  cp -a "$sdl_local_repo/." "$sdl_dir/"
 else
-  log "Updating SDL2 in $sdl_dir"
-  git -C "$sdl_dir" fetch origin "$sdl_ref"
-  git -C "$sdl_dir" checkout --force --detach FETCH_HEAD
+  require_tool git
+  if [[ ! -d "$sdl_dir/.git" ]]; then
+    log "Cloning SDL2 from $sdl_repo ($sdl_ref)"
+    git clone "$sdl_repo" "$sdl_dir"
+    git -C "$sdl_dir" checkout --detach "$sdl_ref"
+  else
+    log "Updating SDL2 in $sdl_dir"
+    git -C "$sdl_dir" fetch origin "$sdl_ref"
+    git -C "$sdl_dir" checkout --force --detach FETCH_HEAD
+  fi
 fi
 
 gles_flag=""
