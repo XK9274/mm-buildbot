@@ -209,6 +209,11 @@ SDL2_MIYOO_REF=your-branch \
 scripts/build-all.sh
 ```
 
+For iterating on an uncommitted `sdl2_miyoo` working-tree change, set
+`SDL2_MIYOO_LOCAL_REPO=/path/to/sdl2_miyoo` instead -- it copies the
+working-tree bytes directly (`cp -a`), no commit or push required, and takes
+priority over `SDL2_MIYOO_REPO`/`SDL2_MIYOO_REF` when set.
+
 `build-all` builds the currently enabled recipes only. Disabled source-port
 recipes remain individually opt-in until their upstream package layouts have
 been verified.
