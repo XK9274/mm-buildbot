@@ -13,10 +13,12 @@ luajit_repo="${LUAJIT_REPO:-https://github.com/LuaJIT/LuaJIT.git}"
 luajit_ref="${LUAJIT_REF:-1ee778a4e37122d8ca7d5733c590a47dafd6b15c}"
 tinydir_repo="${TINYDIR_REPO:-https://github.com/cxong/tinydir.git}"
 tinydir_ref="${TINYDIR_REF:-1.2.6}"
-union_dir="${UNION_TOOLCHAIN_DIR:?UNION_TOOLCHAIN_DIR required (path to your Union Miyoo Mini toolchain checkout)}"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 base_docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 docker_image="${KONPACTO_TOOLCHAIN_IMAGE:-miyoomini-toolchain-konpacto}"
 toolchain_dockerfile="$repo_root/docker/konpacto-mmiyoo-toolchain/Dockerfile"
+konpacto_stamp="$repo_root/work/.toolchain-cache/konpacto.stamp"
 
 konpacto_dir="$work_dir/src/konpacto"
 luajit_dir="$work_dir/src/LuaJIT"
@@ -32,28 +34,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_toolchain_image() {
-  require_tool docker
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    return
-  fi
-  [[ -f "$union_dir/Dockerfile" ]] || {
-    printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-    exit 1
-  }
-  [[ -f "$toolchain_dockerfile" ]] || {
-    printf 'Missing Konpacto toolchain Dockerfile: %s\n' "$toolchain_dockerfile" >&2
-    exit 1
-  }
-  if ! docker image inspect "$base_docker_image" >/dev/null 2>&1; then
-    log "Building base Docker image $base_docker_image from $union_dir"
-    docker build -t "$base_docker_image" "$union_dir"
-  fi
-  log "Building Konpacto toolchain image $docker_image with 32-bit host support"
-  docker build --build-arg BASE_IMAGE="$base_docker_image" \
-    -f "$toolchain_dockerfile" -t "$docker_image" "$repo_root"
 }
 
 require_tool git
@@ -77,7 +57,8 @@ git clone "$tinydir_repo" "$tinydir_dir"
 git -C "$tinydir_dir" checkout --detach "$tinydir_ref"
 install -m 644 "$tinydir_dir/tinydir.h" "$konpacto_dir/src/tinydir.h"
 
-ensure_toolchain_image
+base_docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$base_docker_image")"
+docker_image="$(ensure_derived_toolchain_image "konpacto" "$base_docker_image" "$toolchain_dockerfile" "$repo_root" "$docker_image" "$konpacto_stamp")"
 
 log "Cross-compiling LuaJIT and konpacto against the shared MMIYOO SDL2 and add-on providers"
 docker run --rm \

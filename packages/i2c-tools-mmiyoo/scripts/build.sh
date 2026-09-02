@@ -5,13 +5,15 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 bundle_dir="${4:?bundle dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 source_url="https://www.kernel.org/pub/software/utils/i2c-tools/i2c-tools-4.4.tar.xz"
 source_sha256="8b15f0a880ab87280c40cfd7235cfff28134bf14d5646c07518b1ff6642a2473"
 source_archive="$work_dir/downloads/i2c-tools-4.4.tar.xz"
 source_dir="$work_dir/src/i2c-tools-4.4"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
-union_dir="${UNION_TOOLCHAIN_DIR:-/tmp/union-miyoomini-toolchain}"
 make_jobs="${MAKE_JOBS:-}"
 
 log() {
@@ -23,22 +25,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_toolchain_image() {
-  require_tool docker
-
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    return
-  fi
-
-  [[ -f "$union_dir/Dockerfile" ]] || {
-    printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-    exit 1
-  }
-
-  log "Building Docker image $docker_image from $union_dir"
-  docker build -t "$docker_image" "$union_dir"
 }
 
 require_tool curl
@@ -61,7 +47,7 @@ tar -xJf "$source_archive" -C "$work_dir/src"
   exit 1
 }
 
-ensure_toolchain_image
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$docker_image")"
 
 log "Cross-compiling with the Union Miyoo toolchain"
 docker run --rm \

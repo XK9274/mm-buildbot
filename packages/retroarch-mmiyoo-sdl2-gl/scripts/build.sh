@@ -5,6 +5,7 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 app_dist_dir="${4:?app-dist dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 retroarch_repo="${RETROARCH_REPO:-https://github.com/libretro/RetroArch.git}"
 retroarch_ref="${RETROARCH_REF:-master}"
@@ -19,7 +20,7 @@ libz_path="${LIBZ_PATH:-}"
 retroarch_src="$work_dir/src/RetroArch"
 retroarch_assets_src="$work_dir/src/retroarch-assets"
 retroarch_build="$work_dir/build/retroarch"
-toolchain_work="$work_dir/toolchain"
+toolchain_work="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 app_root="$app_dist_dir/retroarch_sdl2"
 
 log() {
@@ -33,24 +34,6 @@ require_tool() {
   fi
 }
 
-ensure_toolchain_image() {
-  local toolchain="$1"
-
-  require_tool docker
-
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    return
-  fi
-
-  if [[ ! -f "$toolchain/Dockerfile" ]]; then
-    printf 'Missing toolchain Dockerfile: %s/Dockerfile\n' "$toolchain" >&2
-    exit 1
-  fi
-
-  log "Building Docker image $docker_image from $toolchain"
-  docker build -t "$docker_image" "$toolchain"
-}
-
 copy_if_exists() {
   local src="$1"
   local dst="$2"
@@ -58,19 +41,6 @@ copy_if_exists() {
   if [[ -e "$src" ]]; then
     cp -a "$src" "$dst"
   fi
-}
-
-toolchain_root() {
-  if [[ ! -d "$toolchain_work/.git" ]]; then
-    log "Cloning Union toolchain from $union_repo" >&2
-    git clone --depth=1 "$union_repo" "$toolchain_work" >&2
-  else
-    log "Updating Union toolchain in $toolchain_work" >&2
-    git -C "$toolchain_work" fetch --depth=1 origin >&2
-    git -C "$toolchain_work" reset --hard origin/HEAD >&2
-  fi
-
-  printf '%s\n' "$toolchain_work"
 }
 
 build_swiftshader_libs() {
@@ -196,8 +166,6 @@ build_retroarch() {
   fi
 
   mkdir -p "$retroarch_build"
-
-  ensure_toolchain_image "$toolchain"
 
   if [[ -z "$libz_path" ]]; then
     log "Locating libz.so.1 in the toolchain sysroot"
@@ -363,7 +331,8 @@ require_tool make
 : "${MMIYOO_SDL2_PREFIX:?Missing sdl2-mmiyoo-lib dependency prefix}"
 
 mkdir -p "$work_dir/src"
-toolchain="$(toolchain_root)"
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$toolchain_work" "$docker_image")"
+toolchain="$toolchain_work"
 
 build_swiftshader_libs "$toolchain"
 fetch_retroarch

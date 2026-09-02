@@ -9,10 +9,12 @@ source "$repo_root/packages/.shared/port-common.sh"
 
 love_repo="${LOVE_REPO:-https://github.com/love2d/love.git}"
 love_ref="${LOVE_REF:-f834ab72481e95fa90abf573643c8dd168ae0660}"
-union_dir="${UNION_TOOLCHAIN_DIR:?UNION_TOOLCHAIN_DIR required (path to your Union Miyoo Mini toolchain checkout)}"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 package_dir="$repo_root/packages/love-mmiyoo-demo"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
-love_image="${MIYOO_LOVE_IMAGE:-${docker_image}-love-build-v1}"
+love_image="${MIYOO_LOVE_IMAGE:-${docker_image}-love-build}"
+love_stamp="$repo_root/work/.toolchain-cache/love-mmiyoo-demo.stamp"
 love_src="$work_dir/src/love"
 app_root="$app_dist_dir/LoveMiyoo"
 
@@ -23,23 +25,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_image() {
-  require_tool docker
-  if ! docker image inspect "$docker_image" >/dev/null 2>&1; then
-    [[ -f "$union_dir/Dockerfile" ]] || {
-      printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-      exit 1
-    }
-    log "Building Docker image $docker_image from $union_dir"
-    docker build -t "$docker_image" "$union_dir"
-  fi
-  if ! docker image inspect "$love_image" >/dev/null 2>&1; then
-    log "Building LÖVE dependency image $love_image"
-    docker build --build-arg "BASE_IMAGE=$docker_image" -t "$love_image" \
-      "$repo_root/packages/love-mmiyoo-demo"
-  fi
 }
 
 copy_soname_library() {
@@ -98,7 +83,8 @@ cp -a /opt/mmiyoo-sdl2/lib/pkgconfig/sdl2.pc "$prefix/lib/pkgconfig/"
 EOF
 chmod +x "$love_src/mksdl2.sh"
 
-ensure_image
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$docker_image")"
+love_image="$(ensure_derived_toolchain_image "love-mmiyoo-demo" "$docker_image" "$package_dir/Dockerfile" "$package_dir" "$love_image" "$love_stamp")"
 log 'Building LÖVE and dependencies with the GLES SDL provider'
 docker run --rm --user root -e HOME=/root \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \

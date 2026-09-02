@@ -26,7 +26,8 @@ scripts/build-package.sh retroarch-mmiyoo-sdl2-gl
 ```
 
 Override the cached Union toolchain checkout location with
-`UNION_TOOLCHAIN_DIR` if needed (defaults to `/tmp/union-miyoomini-toolchain`).
+`UNION_TOOLCHAIN_DIR` if needed (defaults to `work/.toolchain-cache/union`
+under the repo root, shared with every other package).
 
 Set `BUILD_SWIFTSHADER=1` to also run the SwiftShader build. That is disabled by
 default because the script documents it as a multi-hour build.

@@ -1,0 +1,31 @@
+name: Build toolchain image
+description: Clone a Miyoo Mini toolchain repo and build its Docker image, cached via GitHub Actions cache.
+
+inputs:
+  repo:
+    description: Git URL of the toolchain repo to clone
+    required: false
+    default: https://github.com/XK9274/union-miyoomini-toolchain.git
+  image-tag:
+    description: Docker image tag to build and load
+    required: false
+    default: miyoomini-toolchain
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Clone toolchain repo
+      shell: bash
+      run: git clone --depth=1 "${{ inputs.repo }}" "$RUNNER_TEMP/toolchain-${{ inputs.image-tag }}"
+
+    - name: Build toolchain image (cached)
+      uses: docker/build-push-action@v6
+      with:
+        context: ${{ runner.temp }}/toolchain-${{ inputs.image-tag }}
+        tags: ${{ inputs.image-tag }}:latest
+        load: true
+        cache-from: type=gha,scope=${{ inputs.image-tag }}
+        cache-to: type=gha,mode=max,scope=${{ inputs.image-tag }}

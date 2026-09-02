@@ -62,6 +62,86 @@ is_mmiyoo_platform_library() {
   esac
 }
 
+# Clones/refreshes repo_url into repo_dir and builds image from its
+# Dockerfile, skipping the build only when image already exists locally and
+# repo_dir's HEAD SHA matches the SHA recorded from the last successful
+# build (stamped in repo_dir/.mm-buildbot-build-stamp).
+ensure_toolchain_image() {
+  local name="${1:?toolchain name required}"
+  local repo_url="${2:?toolchain repo url required}"
+  local repo_dir="${3:?toolchain checkout dir required}"
+  local image="${4:?toolchain image tag required}"
+  local stamp_file="$repo_dir/.mm-buildbot-build-stamp"
+  local current_sha
+
+  command -v docker >/dev/null 2>&1 || {
+    printf 'Missing required tool: docker\n' >&2
+    return 1
+  }
+
+  if [[ ! -d "$repo_dir/.git" ]]; then
+    printf 'Cloning %s toolchain from %s\n' "$name" "$repo_url" >&2
+    mkdir -p "$(dirname "$repo_dir")"
+    git clone --depth=1 "$repo_url" "$repo_dir" >&2
+  else
+    git -C "$repo_dir" fetch --depth=1 origin HEAD >&2
+    git -C "$repo_dir" reset --hard FETCH_HEAD >&2
+  fi
+
+  [[ -f "$repo_dir/Dockerfile" ]] || {
+    printf 'Missing %s toolchain Dockerfile: %s/Dockerfile\n' "$name" "$repo_dir" >&2
+    return 1
+  }
+
+  current_sha="$(git -C "$repo_dir" rev-parse HEAD)"
+  if docker image inspect "$image" >/dev/null 2>&1 \
+    && [[ "$(cat "$stamp_file" 2>/dev/null)" == "$image:$current_sha" ]]; then
+    printf '%s\n' "$image"
+    return 0
+  fi
+
+  printf 'Building %s toolchain image %s from %s (%s)\n' "$name" "$image" "$repo_dir" "$current_sha" >&2
+  docker build -t "$image" "$repo_dir" >&2
+  printf '%s:%s' "$image" "$current_sha" > "$stamp_file"
+  printf '%s\n' "$image"
+}
+
+# Builds a Dockerfile layered on top of base_image, skipping the build only
+# when image already exists locally and the Dockerfile's content hash
+# matches the hash recorded in stamp_file from the last successful build.
+ensure_derived_toolchain_image() {
+  local name="${1:?derived image name required}"
+  local base_image="${2:?base image required}"
+  local dockerfile="${3:?dockerfile required}"
+  local context_dir="${4:?build context dir required}"
+  local image="${5:?derived image tag required}"
+  local stamp_file="${6:?stamp file required}"
+  local current_hash
+
+  command -v docker >/dev/null 2>&1 || {
+    printf 'Missing required tool: docker\n' >&2
+    return 1
+  }
+  [[ -f "$dockerfile" ]] || {
+    printf 'Missing %s Dockerfile: %s\n' "$name" "$dockerfile" >&2
+    return 1
+  }
+
+  mkdir -p "$(dirname "$stamp_file")"
+  current_hash="$(sha256sum "$dockerfile" | awk '{print $1}')"
+
+  if docker image inspect "$image" >/dev/null 2>&1 \
+    && [[ "$(cat "$stamp_file" 2>/dev/null)" == "$base_image:$current_hash" ]]; then
+    printf '%s\n' "$image"
+    return 0
+  fi
+
+  printf 'Building %s image %s from %s (base %s)\n' "$name" "$image" "$dockerfile" "$base_image" >&2
+  docker build --build-arg "BASE_IMAGE=$base_image" -f "$dockerfile" -t "$image" "$context_dir" >&2
+  printf '%s:%s' "$base_image" "$current_hash" > "$stamp_file"
+  printf '%s\n' "$image"
+}
+
 mmiyoo_toolchain_readelf() {
   local image="${1:?toolchain image required}"
   local target="${2:?target required}"
