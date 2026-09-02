@@ -11,10 +11,12 @@ blobby_repo="${BLOBBYVOLLEY2_REPO:-https://github.com/danielknobe/blobbyvolley2.
 blobby_ref="${BLOBBYVOLLEY2_REF:-c28c5fa87872b7592f34f5f86196e93d127b6cf9}"
 physfs_repo="${PHYSFS_REPO:-https://github.com/icculus/physfs.git}"
 physfs_ref="${PHYSFS_REF:-eb3383b532c5f74bfeb42ec306ba2cf80eed988c}"
-union_dir="${UNION_TOOLCHAIN_DIR:?UNION_TOOLCHAIN_DIR required (path to your Union Miyoo Mini toolchain checkout)}"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 package_dir="$repo_root/packages/blobbyvolley2-mmiyoo"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
-blobby_image="${MIYOO_BLOBBYVOLLEY2_IMAGE:-${docker_image}-blobbyvolley2-build-v1}"
+blobby_image="${MIYOO_BLOBBYVOLLEY2_IMAGE:-${docker_image}-blobbyvolley2-build}"
+blobby_stamp="$repo_root/work/.toolchain-cache/blobbyvolley2.stamp"
 blobby_src="$work_dir/src/blobbyvolley2"
 physfs_src="$work_dir/src/physfs"
 cmake_modules_dir="$work_dir/cmake-modules"
@@ -27,22 +29,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_image() {
-  require_tool docker
-  if ! docker image inspect "$docker_image" >/dev/null 2>&1; then
-    [[ -f "$union_dir/Dockerfile" ]] || {
-      printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-      exit 1
-    }
-    log "Building Docker image $docker_image from $union_dir"
-    docker build -t "$docker_image" "$union_dir"
-  fi
-  if ! docker image inspect "$blobby_image" >/dev/null 2>&1; then
-    log "Building Blobby Volley 2 dependency image $blobby_image"
-    docker build --build-arg "BASE_IMAGE=$docker_image" -t "$blobby_image" "$package_dir"
-  fi
 }
 
 require_tool git
@@ -90,7 +76,8 @@ EOF
 
 write_mmiyoo_cmake_toolchain_file "$work_dir/toolchain.cmake"
 
-ensure_image
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$docker_image")"
+blobby_image="$(ensure_derived_toolchain_image "blobbyvolley2" "$docker_image" "$package_dir/Dockerfile" "$package_dir" "$blobby_image" "$blobby_stamp")"
 log "Building PhysFS and Blobby Volley 2 against the shared MMIYOO SDL2 provider"
 docker run --rm --user root -e HOME=/root \
   -e HOST_UID="$(id -u)" -e HOST_GID="$(id -g)" \

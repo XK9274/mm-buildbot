@@ -5,12 +5,14 @@ package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
 bundle_dir="${4:?bundle dir required}"
+source "$repo_root/packages/.shared/port-common.sh"
 
 source_url="https://github.com/strace/strace/releases/download/v6.12/strace-6.12.tar.xz"
 source_sha256="c47da93be45b6055f4dc741d7f20efaf50ca10160a5b100c109b294fd9c0bdfe"
 source_archive="$work_dir/downloads/strace-6.12.tar.xz"
 source_dir="$work_dir/src/strace-6.12"
-union_dir="${UNION_TOOLCHAIN_DIR:-/tmp/union-miyoomini-toolchain}"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 make_jobs="${MAKE_JOBS:-}"
 
@@ -23,19 +25,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_toolchain_image() {
-  require_tool docker
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    return
-  fi
-  [[ -f "$union_dir/Dockerfile" ]] || {
-    printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-    exit 1
-  }
-  log "Building Docker image $docker_image from $union_dir"
-  docker build -t "$docker_image" "$union_dir"
 }
 
 require_tool curl
@@ -55,7 +44,7 @@ tar -xJf "$source_archive" -C "$work_dir/src"
   exit 1
 }
 
-ensure_toolchain_image
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$docker_image")"
 log "Cross-compiling strace with the Union Miyoo toolchain"
 docker run --rm \
   --user "$(id -u):$(id -g)" \

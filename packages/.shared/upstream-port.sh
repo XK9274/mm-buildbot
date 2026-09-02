@@ -37,25 +37,10 @@ copy_tree_contents() {
 
 ensure_union_toolchain_image() {
   local union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
-  local union_dir="${UNION_TOOLCHAIN_DIR:-/tmp/union-miyoomini-toolchain}"
+  local union_dir="${UNION_TOOLCHAIN_DIR:-${repo_root:-.}/work/.toolchain-cache/union}"
   local image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 
-  command -v docker >/dev/null 2>&1 || {
-    printf 'Missing required tool: docker\n' >&2
-    return 1
-  }
-  if ! docker image inspect "$image" >/dev/null 2>&1; then
-    if [[ ! -d "$union_dir/.git" ]]; then
-      printf 'Cloning Union toolchain from %s\n' "$union_repo" >&2
-      git clone --depth=1 "$union_repo" "$union_dir" >&2
-    fi
-    [[ -f "$union_dir/Dockerfile" ]] || {
-      printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-      return 1
-    }
-    docker build -t "$image" "$union_dir" >&2
-  fi
-  printf '%s\n' "$image"
+  ensure_toolchain_image "union" "$union_repo" "$union_dir" "$image"
 }
 
 build_source_port() {

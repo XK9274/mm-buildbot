@@ -11,7 +11,8 @@ pokedex_repo="${YORISOFT_POKEDEX_REPO:-https://github.com/Yorisoft/pokedex_miyoo
 pokedex_ref="${YORISOFT_POKEDEX_REF:-7e998b923738d3b00e3a2867c8aa29c4b7b1d06a}"
 sqlite_url="https://www.sqlite.org/2026/sqlite-amalgamation-3530400.zip"
 sqlite_sha256="1e71ddf93849c6a6ecf58b827c0692073d2dd7ee40196158068f7b29f422e87d"
-union_dir="${UNION_TOOLCHAIN_DIR:?UNION_TOOLCHAIN_DIR required (path to your Union Miyoo Mini toolchain checkout)}"
+union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
+union_dir="${UNION_TOOLCHAIN_DIR:-$repo_root/work/.toolchain-cache/union}"
 docker_image="${MIYOO_TOOLCHAIN_IMAGE:-miyoomini-toolchain}"
 pokedex_dir="$work_dir/src/pokedex_miyoo"
 workspace_dir="$pokedex_dir/Source/union-miyoomini-toolchain/workspace"
@@ -27,19 +28,6 @@ require_tool() {
     printf 'Missing required tool: %s\n' "$1" >&2
     exit 1
   }
-}
-
-ensure_toolchain_image() {
-  require_tool docker
-  if docker image inspect "$docker_image" >/dev/null 2>&1; then
-    return
-  fi
-  [[ -f "$union_dir/Dockerfile" ]] || {
-    printf 'Missing Union toolchain Dockerfile: %s/Dockerfile\n' "$union_dir" >&2
-    exit 1
-  }
-  log "Building Docker image $docker_image from $union_dir"
-  docker build -t "$docker_image" "$union_dir"
 }
 
 require_tool git
@@ -72,7 +60,7 @@ sqlite_dir="$work_dir/src/sqlite-amalgamation-3530400"
 mkdir -p "$retrodex_dir/core/include/sqlite"
 install -m 644 "$sqlite_dir/sqlite3.c" "$sqlite_dir/sqlite3.h" "$retrodex_dir/core/include/sqlite/"
 
-ensure_toolchain_image
+docker_image="$(ensure_toolchain_image "union" "$union_repo" "$union_dir" "$docker_image")"
 log "Building Retrodex against the shared MMIYOO SDL2 and add-on providers"
 docker run --rm \
   --user root \
