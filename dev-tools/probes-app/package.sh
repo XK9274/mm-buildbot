@@ -48,7 +48,8 @@ needs_neon_only=0
 needs_freetype=0
 for name in "${built[@]}"; do
   case "$name" in
-    downscale-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
+    downscale-bench-probe|fill-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
+    memcpy-bench-probe) needs_neon_only=1 ;;
     *) needs_sdl2=1 ;;
   esac
 done
@@ -73,13 +74,11 @@ fi
 
 [[ -f "$icon_src" ]] && install -m 644 "$icon_src" "$app_dist_dir/icon.png"
 
-icon_field=""
-[[ -f "$app_dist_dir/icon.png" ]] && icon_field='"icon": "icon.png",
-  '
 cat > "$app_dist_dir/config.json" <<EOF
 {
   "label": "$label",
-  ${icon_field}"launch": "launch.sh",
+  "icon": "icon.png",
+  "launch": "launch.sh",
   "description": "Standalone diagnostic probes -- edit PROBE= in launch.sh to switch which one runs"
 }
 EOF
