@@ -106,6 +106,7 @@ expected_binaries=(
   sdl2_sprite_bench
   sdl2_gfx_bench
   sdl2_obj_model_loader
+  sdl2_messagebox_probe
 )
 
 for binary in "${expected_binaries[@]}"; do
