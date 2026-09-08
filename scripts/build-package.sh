@@ -78,14 +78,27 @@ while IFS= read -r dependency; do
         printf '%s' "$union_selection" >"$selection_file"
         SDL2_ADDONS="$union_selection" "$script_dir/build-package.sh" "$dependency"
       fi
-    elif [[ ! -f "$dependency_marker" ]]; then
-      if [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
-        # Let the consumer opt out of GLES (e.g. an app with no GL/EGL symbols).
-        sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
-        if [[ "$sdl2_gles" == "no" ]]; then
+    elif [[ "$dependency" == "sdl2-mmiyoo-lib" ]]; then
+      # Keyed on ambient SDL2_MIYOO_ENABLE_GLES too, not just this package's
+      # own opt-out, so a shared session rebuilds on a mode change instead of
+      # reusing an earlier consumer's build.
+      sdl2_gles="$(awk '$1 == "sdl2_gles:" { print $2; exit }' "$config")"
+      requested_gles_mode="gles"
+      if [[ "$sdl2_gles" == "no" || "${SDL2_MIYOO_ENABLE_GLES:-1}" == "0" ]]; then
+        requested_gles_mode="nogl"
+      fi
+      gles_mode_file="$BUILDBOT_SESSION_DIR/sdl2-mmiyoo-lib.gles-mode"
+      previous_gles_mode=""
+      [[ -f "$gles_mode_file" ]] && previous_gles_mode="$(cat "$gles_mode_file")"
+      if [[ ! -f "$dependency_marker" || "$requested_gles_mode" != "$previous_gles_mode" ]]; then
+        rm -f "$dependency_marker"
+        printf '%s' "$requested_gles_mode" >"$gles_mode_file"
+        if [[ "$requested_gles_mode" == "nogl" ]]; then
           export SDL2_MIYOO_ENABLE_GLES=0
         fi
+        "$script_dir/build-package.sh" "$dependency"
       fi
+    elif [[ ! -f "$dependency_marker" ]]; then
       "$script_dir/build-package.sh" "$dependency"
     fi
   fi
