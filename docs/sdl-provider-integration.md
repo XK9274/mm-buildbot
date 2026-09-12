@@ -13,7 +13,7 @@ that core provider. It never compiles stock SDL2.
 
 | recipe | core SDL2 | add-ons | runtime handling |
 | --- | --- | --- | --- |
-| `sdl2-benchmarks-mmiyoo` | yes | Image/TTF/gfx | Builds the eight benchmark binaries against both shared providers and stages the complete runtime closure. |
+| `sdl2-benchmarks-mmiyoo` | yes | Image/TTF/gfx | Builds the 16 benchmark binaries against both shared providers and stages the complete runtime closure. |
 | `retroarch-mmiyoo-sdl2-gl` | yes | no | Links and stages the core runtime from `sdl2-mmiyoo-lib`. |
 | `yorisoft-pokedex` | yes | Image/TTF/Net/Mixer | Stages the core and required add-ons from their providers. |
 | `love-mmiyoo-demo` | yes | no | Its local build hook installs the provider; it does not invoke `mk_mmiyoo.sh`. |

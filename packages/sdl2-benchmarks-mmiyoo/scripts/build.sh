@@ -100,7 +100,13 @@ expected_binaries=(
   sdl2_title
   sdl2_bench_double_buf
   sdl2_space_bench
-  sdl2_render_suite
+  sdl2_fill_bench
+  sdl2_texture_bench
+  sdl2_lines_bench
+  sdl2_geometry_bench
+  sdl2_scaling_bench
+  sdl2_memory_bench
+  sdl2_pixels_bench
   sdl2_gl_fbo_effects
   sdl2_audio_bench
   sdl2_sprite_bench
