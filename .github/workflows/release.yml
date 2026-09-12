@@ -162,6 +162,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.preflight.outputs.target_sha }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Download release bundle
         uses: actions/download-artifact@v4
@@ -172,8 +174,21 @@ jobs:
       - name: Build release notes
         id: notes
         run: |
+          TAG="${{ needs.preflight.outputs.tag }}"
+          TARGET_SHA="${{ needs.preflight.outputs.target_sha }}"
+
+          PREV_TAG="$(git tag --list 'v*' --sort=-v:refname | grep -vx "$TAG" | head -1)"
+          RANGE="$TARGET_SHA"
+          [[ -n "$PREV_TAG" ]] && RANGE="$PREV_TAG..$TARGET_SHA"
+          COMMIT_LIST="$(git log "$RANGE" --oneline --no-merges --reverse)"
+          if [[ -z "$COMMIT_LIST" ]]; then
+            CHANGELOG="No new commits — this tag points to the same commit as the previous release."
+          else
+            CHANGELOG="$(echo "$COMMIT_LIST" | sed -E 's/^([0-9a-f]+) (.*)$/- `\1` \2/')"
+          fi
+
           {
-            echo "## mm-buildbot packages — ${{ needs.preflight.outputs.tag }}"
+            echo "## mm-buildbot packages — $TAG"
             echo ""
             echo "| Package | Description |"
             echo "|---|---|"
@@ -190,8 +205,12 @@ jobs:
             echo "sha256sum -c SHA256SUMS.txt"
             echo '```'
             echo ""
+            echo "### What changed"
+            echo ""
+            echo "$CHANGELOG"
+            echo ""
             echo "### Build info"
-            echo "- Commit: ${{ needs.preflight.outputs.short_sha }} (\`${{ needs.preflight.outputs.target_sha }}\`)"
+            echo "- Commit: ${{ needs.preflight.outputs.short_sha }} (\`$TARGET_SHA\`)"
           } > release-notes.md
           cat release-notes.md
 
