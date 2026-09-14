@@ -7,7 +7,7 @@ source:
   ref: miyoo
 depends_on:
   - sdl2-mmiyoo-lib
-build_all: false
+build_all: true
 artifact:
   type: port
   output_name: blobbyvolley2-mmiyoo
