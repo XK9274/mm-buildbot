@@ -42,7 +42,8 @@ require_tool docker
 mkdir -p "$work_dir/src" "$cmake_modules_dir"
 log "Cloning Blobby Volley 2 source at $blobby_ref"
 git clone "$blobby_repo" "$blobby_src"
-git -C "$blobby_src" checkout --detach "$blobby_ref"
+git -C "$blobby_src" fetch origin "$blobby_ref"
+git -C "$blobby_src" checkout --detach FETCH_HEAD
 
 log "Cloning PhysFS source at $physfs_ref"
 git clone "$physfs_repo" "$physfs_src"
