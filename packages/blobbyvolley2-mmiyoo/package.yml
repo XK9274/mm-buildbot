@@ -1,16 +1,16 @@
 id: blobbyvolley2-mmiyoo
 name: Blobby Volley 2 for Miyoo Mini family
-modified_source: no
-version: c28c5fa87872b7592f34f5f86196e93d127b6cf9
+modified_source: yes
+version: latest
 source:
-  repo: https://github.com/danielknobe/blobbyvolley2.git
-  ref: c28c5fa87872b7592f34f5f86196e93d127b6cf9
+  repo: https://github.com/XK9274/blobbyvolley2.git
+  ref: miyoo
 depends_on:
   - sdl2-mmiyoo-lib
 build_all: false
-app_dist:
-  template: packages/blobbyvolley2-mmiyoo/templates
-  output_name: BlobbyVolley2
+artifact:
+  type: port
+  output_name: blobbyvolley2-mmiyoo
 host:
   build_system: cmake
   source_dir: .

@@ -8,8 +8,10 @@ the drivers/providers pick up as a fix.
 
 ## In progress
 
-- **Blobby Volley 2** (`blobbyvolley2-mmiyoo`) — builds and runs, but
-  input doesn't currently work on-device. See package README.
+- **Blobby Volley 2** (`blobbyvolley2-mmiyoo`) — builds and runs as a
+  `Roms/PORTS/...` port against a fork adding a `__MIYOO__` build target;
+  joystick input works, final on-device UX confirmation pending. See
+  package README.
 
 ## Investigating feasibility
 

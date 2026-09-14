@@ -1,11 +1,23 @@
 # Blobby Volley 2
 
-Builds [Blobby Volley 2](https://github.com/danielknobe/blobbyvolley2) against
-the shared MMIYOO SDL2 provider. CMake's `find_package(SDL2 REQUIRED)` falls
-back to defining its own `SDL2::SDL2` target from plain `SDL2_INCLUDE_DIRS`/
-`SDL2_LIBRARIES` when no CMake package config is found, so `scripts/build.sh`
-supplies a small `FindSDL2.cmake` pointing at the provider prefix instead of
-staging an upstream SDL2 CMake config.
+Builds [Blobby Volley 2](https://github.com/XK9274/blobbyvolley2) (a fork of
+[danielknobe/blobbyvolley2](https://github.com/danielknobe/blobbyvolley2),
+`miyoo` branch) against the shared MMIYOO SDL2 provider, staged as a
+`Roms/PORTS/...` Onion-launcher port. CMake's `find_package(SDL2 REQUIRED)`
+falls back to defining its own `SDL2::SDL2` target from plain
+`SDL2_INCLUDE_DIRS`/`SDL2_LIBRARIES` when no CMake package config is found,
+so `scripts/build.sh` supplies a small `FindSDL2.cmake` pointing at the
+provider prefix instead of staging an upstream SDL2 CMake config.
+
+The fork adds a `__MIYOO__` build define (always on for this package):
+fullscreen, accelerated/vsync rendering, no window icon or software cursor
+sprite (this device has neither a window manager nor a mouse), the joystick
+opened eagerly at startup rather than waiting on a hotplug event, and a
+joystick button mapping matching the mmiyoo driver's own button indices
+instead of the stale placeholder mapping upstream ships outside `__SWITCH__`.
+`assets/inputconfig.xml` binds both sides to the joystick (D-pad for
+left/right, A for jump); `assets/config.xml` enables `show_shadow` by
+default.
 
 PhysFS has no vendored copy in this project and is cross-compiled from its
 own upstream source as a static library (`FindPhysFS.cmake` points at that
@@ -26,4 +38,6 @@ baked-in install prefix.
 
 ## Known issues
 
-Input does not currently work on-device.
+Menu navigation and in-match joystick controls are functional. UX of the
+current default button mapping has not yet had a final confirmation pass
+on hardware following the most recent input/rendering changes.
