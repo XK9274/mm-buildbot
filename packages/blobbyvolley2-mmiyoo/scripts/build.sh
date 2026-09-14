@@ -4,11 +4,11 @@ set -euo pipefail
 package_id="${1:?package id required}"
 repo_root="${2:?repo root required}"
 work_dir="${3:?work dir required}"
-app_dist_dir="${4:?app-dist dir required}"
+stage_dir="${4:?stage dir required}"
 source "$repo_root/packages/.shared/port-common.sh"
 
-blobby_repo="${BLOBBYVOLLEY2_REPO:-https://github.com/danielknobe/blobbyvolley2.git}"
-blobby_ref="${BLOBBYVOLLEY2_REF:-c28c5fa87872b7592f34f5f86196e93d127b6cf9}"
+blobby_repo="${BLOBBYVOLLEY2_REPO:-https://github.com/XK9274/blobbyvolley2.git}"
+blobby_ref="${BLOBBYVOLLEY2_REF:-miyoo}"
 physfs_repo="${PHYSFS_REPO:-https://github.com/icculus/physfs.git}"
 physfs_ref="${PHYSFS_REF:-eb3383b532c5f74bfeb42ec306ba2cf80eed988c}"
 union_repo="${UNION_TOOLCHAIN_REPO:-https://github.com/XK9274/union-miyoomini-toolchain.git}"
@@ -20,7 +20,7 @@ blobby_stamp="$repo_root/work/.toolchain-cache/blobbyvolley2.stamp"
 blobby_src="$work_dir/src/blobbyvolley2"
 physfs_src="$work_dir/src/physfs"
 cmake_modules_dir="$work_dir/cmake-modules"
-app_root="$app_dist_dir/BlobbyVolley2"
+game_dir="$stage_dir/Roms/PORTS/Games/BlobbyVolley2"
 
 log() { printf '[%s] %s\n' "$package_id" "$*"; }
 
@@ -112,6 +112,7 @@ docker run --rm --user root -e HOME=/root \
     cmake --build /workspace/physfs-build -j"$(nproc)"
     cmake --install /workspace/physfs-build
 
+    build_flags="-D__MIYOO__"
     debug_cmake_args=()
     if [ "$BLOBBYVOLLEY2_DEBUG" = "1" ]; then
       # Opt-in debug build: unstripped symbols, -O0 by default. Override
@@ -119,7 +120,8 @@ docker run --rm --user root -e HOME=/root \
       # different optimization level. Unset/0 leaves the normal release
       # build unchanged.
       opt_level="${BLOBBYVOLLEY2_DEBUG_OPT_LEVEL:--O0}"
-      debug_cmake_args=(-DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-DDEBUG -g $opt_level" -DCMAKE_C_FLAGS="-DDEBUG -g $opt_level")
+      build_flags="$build_flags -DDEBUG -g $opt_level"
+      debug_cmake_args=(-DCMAKE_BUILD_TYPE=Debug)
     fi
 
     rm -rf /workspace/blobby-build
@@ -127,6 +129,7 @@ docker run --rm --user root -e HOME=/root \
       -DCMAKE_TOOLCHAIN_FILE=/workspace/toolchain.cmake \
       -DCMAKE_MODULE_PATH=/workspace/cmake-modules \
       -DBUILD_TESTS=OFF \
+      -DCMAKE_CXX_FLAGS="$build_flags" -DCMAKE_C_FLAGS="$build_flags" \
       "${debug_cmake_args[@]}"
     cmake --build /workspace/blobby-build -j"$(nproc)"
   '
@@ -137,9 +140,11 @@ blobby_bin="$(find "$work_dir/blobby-build" -maxdepth 2 -type f -name blobby -pe
   exit 1
 }
 
-log "Staging app distribution"
-mkdir -p "$app_root/lib"
-install -m 755 "$blobby_bin" "$app_root/blobby"
+log "Staging port distribution"
+mkdir -p "$game_dir/lib" \
+  "$stage_dir/Roms/PORTS/Shortcuts/Arcade" \
+  "$stage_dir/Roms/PORTS/Imgs"
+install -m 755 "$blobby_bin" "$game_dir/blobby"
 
 # Engine data search order (src/main.cpp) tries, in this priority: ./data,
 # then the executable's own directory, then (unix installs only) a
@@ -151,25 +156,51 @@ data_build="$work_dir/blobby-build/data"
 for archive in gfx sounds scripts backgrounds rules; do
   zip_file="$(find "$data_build" -maxdepth 1 -name "$archive.zip" | head -n1)"
   [[ -n "$zip_file" ]] || { printf 'Missing built data archive: %s.zip\n' "$archive" >&2; exit 1; }
-  install -m 644 "$zip_file" "$app_root/$archive.zip"
+  install -m 644 "$zip_file" "$game_dir/$archive.zip"
 done
-for file in api.lua bot_api.lua rules_api.lua config.xml inputconfig.xml server.xml \
-            lang_cs.xml lang_de.xml lang_en.xml lang_es.xml lang_fr.xml lang_it.xml Icon.bmp; do
-  install -m 644 "$data_src/$file" "$app_root/$file"
+for file in api.lua bot_api.lua rules_api.lua server.xml \
+            lang_cs.xml lang_de.xml lang_en.xml lang_es.xml lang_fr.xml lang_it.xml; do
+  install -m 644 "$data_src/$file" "$game_dir/$file"
 done
+install -m 644 "$package_dir/assets/config.xml" "$game_dir/config.xml"
+install -m 644 "$package_dir/assets/inputconfig.xml" "$game_dir/inputconfig.xml"
 
-for library in libSDL2-2.0.so.0 libEGL.so libGLESv2.so libneonarmmiyoo.so; do
-  install -m 755 "$MMIYOO_SDL2_PREFIX/lib/$library" "$app_root/lib/$library"
-done
+stage_mmiyoo_sdl_runtime "$MMIYOO_SDL2_PREFIX" "$game_dir/lib"
 
 # libEGL.so needs libz.so.1, which only exists inside the toolchain image's
 # sysroot, not on the host -- locate and copy it out via a throwaway container.
-if [[ ! -f "$app_root/lib/libz.so.1" ]]; then
+if [[ ! -f "$game_dir/lib/libz.so.1" ]]; then
   docker run --rm --user "$(id -u):$(id -g)" \
-    -v "$app_root/lib":/workspace/out \
+    -v "$game_dir/lib":/workspace/out \
     "$docker_image" \
     bash -c 'found=$(find /opt/miyoomini-toolchain -name "libz.so.1" | head -1); [ -n "$found" ] && cp -aL "$found" /workspace/out/libz.so.1'
 fi
 
-verify_mmiyoo_runtime_closure "$app_root" "$docker_image"
-log "App distribution staged at $app_root"
+install -m 644 "$package_dir/assets/icon.png" "$stage_dir/Roms/PORTS/Imgs/BlobbyVolley2.png"
+
+cat > "$stage_dir/Roms/PORTS/Shortcuts/Arcade/BlobbyVolley2.port" <<'EOF'
+#!/bin/sh
+# Standalone Ports Script Template
+
+# main configuration :
+GameName="Blobby Volley 2 (Port)"
+GameDir="BlobbyVolley2"
+GameExecutable="blobby"
+GameDataFile=""
+
+# additional configuration
+KillAudioserver=1
+PerformanceMode=0
+
+# specific to this port :
+Arguments=""
+
+# running command line :
+/mnt/SDCARD/Emu/PORTS/launch_standalone.sh "$GameName" "$GameDir" "$GameExecutable" "$Arguments" "$GameDataFile" "$KillAudioserver" "$PerformanceMode"
+EOF
+chmod 755 "$stage_dir/Roms/PORTS/Shortcuts/Arcade/BlobbyVolley2.port"
+
+install -m 644 "$package_dir/README.md" "$stage_dir/README.md"
+
+verify_mmiyoo_runtime_closure "$stage_dir" "$docker_image"
+log "Port staged at $stage_dir"
