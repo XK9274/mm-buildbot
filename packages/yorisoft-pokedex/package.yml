@@ -8,7 +8,7 @@ source:
 depends_on:
   - sdl2-mmiyoo-lib
   - sdl2-mmiyoo-addons
-build_all: false
+build_all: true
 app_dist:
   template: packages/yorisoft-pokedex/templates
   output_name: Retrodex

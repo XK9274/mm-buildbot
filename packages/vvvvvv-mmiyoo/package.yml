@@ -11,7 +11,7 @@ depends_on:
 sdl2_addons:
   - mixer
 sdl2_gles: no
-build_all: false
+build_all: true
 artifact:
   type: port
   output_name: vvvvvv-mmiyoo
