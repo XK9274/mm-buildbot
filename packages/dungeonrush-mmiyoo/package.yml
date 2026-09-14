@@ -1,6 +1,6 @@
 id: dungeonrush-mmiyoo
 name: DungeonRush for Miyoo Mini family
-modified_source: no
+modified_source: yes
 version: ff44828b2bd89e0edb831673aca64ef4377c0c32
 source:
   repo: https://github.com/XK9274/DungeonRush.git

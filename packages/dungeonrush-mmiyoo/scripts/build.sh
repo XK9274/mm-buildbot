@@ -27,6 +27,12 @@ done
 image="$(ensure_union_toolchain_image)"
 clone_pinned_source "$dungeonrush_repo" "$dungeonrush_ref" "$source_dir"
 
+for patch in "$repo_root/packages/dungeonrush-mmiyoo/patches"/*.patch; do
+  [[ -e "$patch" ]] || continue
+  log "Applying patch $(basename "$patch")"
+  git -C "$source_dir" apply "$patch"
+done
+
 mkdir -p "$build_dir"
 log "Cross-compiling DungeonRush $dungeonrush_ref via CMake"
 docker run --rm \
