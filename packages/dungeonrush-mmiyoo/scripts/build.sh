@@ -106,6 +106,8 @@ mkdir -p "$game_dir/lib" \
 install -m 755 "$build_dir/bin/dungeon_rush" "$game_dir/dungeon_rush"
 rm -rf "$game_dir/res"
 cp -R "$build_dir/bin/res" "$game_dir/res"
+python3 "$repo_root/packages/dungeonrush-mmiyoo/scripts/fix-title-asset.py" "$game_dir/res/drawable"
+"$repo_root/packages/dungeonrush-mmiyoo/scripts/fix-bgm-audio.sh" "$game_dir/res/audio"
 install -m 644 "$repo_root/packages/dungeonrush-mmiyoo/assets/icon.png" "$stage_dir/Roms/PORTS/Imgs/DungeonRush.png"
 
 stage_mmiyoo_sdl_runtime "$MMIYOO_SDL2_PREFIX" "$game_dir/lib"
