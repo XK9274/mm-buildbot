@@ -116,6 +116,6 @@ done
 # but requires an additional libglapi runtime library. Retrodex and its freshly
 # built SDL stack do not link to it.
 rm -f "$app_root/lib/libGLESv1_CM.so"
-verify_mmiyoo_runtime_closure "$app_root"
+verify_mmiyoo_runtime_closure "$app_root" "$docker_image"
 
 log "App distribution staged at $app_root"

@@ -130,6 +130,6 @@ install -m 755 "$MMIYOO_SDL2_PREFIX/lib/libSDL2-2.0.so.0" "$app_root/lib/libSDL2
 # a res/ prefix like other packages here.
 cp -a "$konpacto_dir/src/assets" "$app_root/assets"
 
-verify_mmiyoo_runtime_closure "$app_root"
+verify_mmiyoo_runtime_closure "$app_root" "$docker_image"
 
 log "App distribution staged at $app_root"
