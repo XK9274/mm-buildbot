@@ -38,19 +38,28 @@ def main():
         return
 
     scale = TARGET_WIDTH / total_width
-    new_w = int(w * scale)
-    new_h = round(h * scale)
+    new_w = max(1, round(w * scale))
+    new_h = max(1, round(h * scale))
     new_total_width = new_w * frames
 
     img = Image.open(image_path)
     if img.size != (total_width, h):
         sys.exit(f"fix-title-asset.py: title.png is {img.size}, expected "
                   f"{(total_width, h)} from the descriptor")
+    # LANCZOS on a palette image resamples indices, not colors -- PIL
+    # effectively falls back to nearest-neighbor. Convert to RGBA first.
+    img = img.convert("RGBA")
 
-    resized = img.resize((new_total_width, new_h), Image.LANCZOS)
+    # Resize each frame separately and recomposite: downscaling the whole
+    # strip in one pass lets LANCZOS's filter kernel sample across frame
+    # boundaries, bleeding adjacent frames into each other's edges.
+    resized = Image.new(img.mode, (new_total_width, new_h))
+    for i in range(frames):
+        frame = img.crop((x + i * w, y, x + i * w + w, y + h))
+        resized.paste(frame.resize((new_w, new_h), Image.LANCZOS), (i * new_w, 0))
     resized.save(image_path)
 
-    descriptor_path.write_text(f"{name} {x} {y} {new_w} {new_h} {frames}\n")
+    descriptor_path.write_text(f"{name} 0 0 {new_w} {new_h} {frames}\n")
     print(f"fix-title-asset: {w}x{h}x{frames} (total {total_width}px) -> "
           f"{new_w}x{new_h}x{frames} (total {new_total_width}px)")
 
