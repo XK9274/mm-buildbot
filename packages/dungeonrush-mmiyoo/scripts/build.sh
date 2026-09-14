@@ -135,6 +135,10 @@ PerformanceMode=0
 # specific to this port :
 Arguments=""
 
+# Fill the 640x480 panel instead of the default aspect-preserving
+# letterbox. Scoped to this port only.
+export SDL_MMIYOO_STRETCH=1
+
 # running command line :
 /mnt/SDCARD/Emu/PORTS/launch_standalone.sh "$GameName" "$GameDir" "$GameExecutable" "$Arguments" "$GameDataFile" "$KillAudioserver" "$PerformanceMode"
 EOF
