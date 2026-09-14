@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="1100" height="1010" viewBox="0 0 1100 1010" role="img" aria-labelledby="title description">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="1100" height="1080" viewBox="0 0 1100 1080" role="img" aria-labelledby="title description">
   <title id="title">mm-buildbot package matrix</title>
   <desc id="description">Tracked mm-buildbot packages, native host support, and modified source status</desc>
   <foreignObject width="100%" height="100%">
     <xhtml:div xmlns="http://www.w3.org/1999/xhtml">
       <style>
         * { box-sizing: border-box; }
-        .card { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #dbeafe; background: transparent; padding: 22px; width: 1100px; height: 1010px; }
+        .card { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #dbeafe; background: transparent; padding: 22px; width: 1100px; height: 1080px; }
         h1 { font-size: 26px; margin: 0 0 4px; color: #f8fafc; }
         .subtitle { color: #94a3b8; font-size: 14px; margin-bottom: 18px; }
         .table { overflow: hidden; }
@@ -29,6 +29,12 @@
           <div class="row header"><div>Package</div><div>Artifact</div><div>Native run</div><div>Modified source</div></div>
           <div class="row">
   <div class="identity"><span class="icon empty">—</span><div><strong>blobbyvolley2-mmiyoo</strong><span>Blobby Volley 2 for Miyoo Mini family</span></div></div>
+  <div class="kind">port</div>
+  <div class="native">yes</div>
+  <div class="modified">yes</div>
+</div>
+<div class="row">
+  <div class="identity"><span class="icon empty">—</span><div><strong>dungeonrush-mmiyoo</strong><span>DungeonRush for Miyoo Mini family</span></div></div>
   <div class="kind">port</div>
   <div class="native">yes</div>
   <div class="modified">yes</div>
