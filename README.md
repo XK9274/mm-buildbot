@@ -34,7 +34,6 @@ libraries doesn't count).
 
 <table>
 <colgroup>
-<col width="48">
 <col width="220">
 <col>
 <col width="90">
@@ -42,17 +41,17 @@ libraries doesn't count).
 <col>
 </colgroup>
 <thead>
-<tr><th></th><th>id</th><th>builds</th><th>native run</th><th>modified source</th><th>notes</th></tr>
+<tr><th>id</th><th>builds</th><th>native run</th><th>modified source</th><th>notes</th></tr>
 </thead>
 <tbody>
-<tr><td><img src="packages/sdl2-benchmarks-mmiyoo/templates/sdl_bench/icon.png" alt="SDL2 Benchmarks icon" width="32" height="32"></td><td><code>sdl2-benchmarks-mmiyoo</code></td><td>16-binary SDL2 benchmark suite (render, audio, GLES, SDL2_gfx, SDL2_image, backend behavior).</td><td>—</td><td>no</td><td>Opt-in (<code>build_all: false</code>) pending a full clean-build + device test pass.</td></tr>
-<tr><td><img src="packages/retroarch-mmiyoo-sdl2-gl/templates/retroarch_sdl2/icon.png" alt="RetroArch icon" width="32" height="32"></td><td><code>retroarch-mmiyoo-sdl2-gl</code></td><td>RetroArch (Ozone menu, GL/GLES, SDL audio/input/rumble).</td><td>—</td><td>yes</td><td>Patched for texture-load debug logging. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code>.</td></tr>
-<tr><td><img src="packages/love-mmiyoo-demo/templates/LoveMiyoo/icon.png" alt="LÖVE icon" width="32" height="32"></td><td><code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 + a menu launcher over several test scenes.</td><td>yes</td><td>no</td><td>Own cross-compile build system (<code>build_love.sh</code>/<code>cross.cmake</code>/<code>sdl2.m4</code>); engine source untouched. Early WIP, known bugs in <code>STATUS.md</code>. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/konpacto-mmiyoo/templates/Konpacto/icon.png" alt="Konpacto icon" width="32" height="32"></td><td><code>konpacto-mmiyoo</code></td><td>Konpacto FM Macro Tracker.</td><td>—</td><td>no</td><td>Supplies LuaJIT + <code>tinydir.h</code>; source untouched. Native host build uses system SDL2/Image/Mixer. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/yorisoft-pokedex/assets/icon.png" alt="Retrodex icon" width="32" height="32"></td><td><code>yorisoft-pokedex</code></td><td>Yorisoft's Retrodex Pokedex app.</td><td>—</td><td>no</td><td>Supplies the pinned SQLite amalgamation and tweaks <code>CMakeLists.txt</code> to link it; app source untouched. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/blobbyvolley2-mmiyoo/assets/icon.png" alt="Blobby Volley 2 icon" width="32" height="32"></td><td><code>blobbyvolley2-mmiyoo</code></td><td>Blobby Volley 2 (PhysFS static, Boost header-only), staged as a <code>Roms/PORTS/...</code> port.</td><td>yes</td><td>yes</td><td>See <code>packages/blobbyvolley2-mmiyoo/README.md</code>. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/vvvvvv-mmiyoo/assets/icon.png" alt="VVVVVV icon" width="32" height="32"></td><td><code>vvvvvv-mmiyoo</code></td><td>VVVVVV 2.3.6.</td><td>yes</td><td>no</td><td>No GLES (<code>sdl2_gles: no</code>); only the <code>mixer</code> addon. Retail <code>data.zip</code> not bundled. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/dungeonrush-mmiyoo/assets/icon.png" alt="DungeonRush icon" width="32" height="32"></td><td><code>dungeonrush-mmiyoo</code></td><td>DungeonRush, built from a pinned fork commit.</td><td>yes</td><td>yes</td><td>Port artifact type. Native 1440x960 vs. the 640x480 panel: <code>.port</code> requests a non-uniform stretch instead of letterbox, and a patch bumps the HUD/menu font size for legibility; sprites still read small since the game renders at 1440x960 internally. Build-time fixes for an oversized title-screen texture (past the renderer's 4096px cap) and two BGM tracks with an undecodable multiplexed stream. All three kept as build-time transforms/patches rather than permanent commits on the pinned fork. See <code>packages/dungeonrush-mmiyoo/README.md</code>. <code>build_all: true</code>.</td></tr>
+<tr><td><code>sdl2-benchmarks-mmiyoo</code></td><td>16-binary SDL2 benchmark suite (render, audio, GLES, SDL2_gfx, SDL2_image, backend behavior).</td><td>—</td><td>no</td><td>Opt-in (<code>build_all: false</code>) pending a full clean-build + device test pass.</td></tr>
+<tr><td><code>retroarch-mmiyoo-sdl2-gl</code></td><td>RetroArch (Ozone menu, GL/GLES, SDL audio/input/rumble).</td><td>—</td><td>yes</td><td>Patched for texture-load debug logging. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code>.</td></tr>
+<tr><td><code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 + a menu launcher over several test scenes.</td><td>yes</td><td>no</td><td>Own cross-compile build system (<code>build_love.sh</code>/<code>cross.cmake</code>/<code>sdl2.m4</code>); engine source untouched. Early WIP, known bugs in <code>STATUS.md</code>. <code>build_all: true</code>.</td></tr>
+<tr><td><code>konpacto-mmiyoo</code></td><td>Konpacto FM Macro Tracker.</td><td>—</td><td>no</td><td>Supplies LuaJIT + <code>tinydir.h</code>; source untouched. Native host build uses system SDL2/Image/Mixer. <code>build_all: true</code>.</td></tr>
+<tr><td><code>yorisoft-pokedex</code></td><td>Yorisoft's Retrodex Pokedex app.</td><td>—</td><td>no</td><td>Supplies the pinned SQLite amalgamation and tweaks <code>CMakeLists.txt</code> to link it; app source untouched. <code>build_all: true</code>.</td></tr>
+<tr><td><code>blobbyvolley2-mmiyoo</code></td><td>Blobby Volley 2 (PhysFS static, Boost header-only), staged as a <code>Roms/PORTS/...</code> port.</td><td>yes</td><td>yes</td><td>See <code>packages/blobbyvolley2-mmiyoo/README.md</code>. <code>build_all: true</code>.</td></tr>
+<tr><td><code>vvvvvv-mmiyoo</code></td><td>VVVVVV 2.3.6.</td><td>yes</td><td>no</td><td>No GLES (<code>sdl2_gles: no</code>); only the <code>mixer</code> addon. Retail <code>data.zip</code> not bundled. <code>build_all: true</code>.</td></tr>
+<tr><td><code>dungeonrush-mmiyoo</code></td><td>DungeonRush, built from a pinned fork commit.</td><td>yes</td><td>yes</td><td>Port artifact type. Native 1440x960 vs. the 640x480 panel: <code>.port</code> requests a non-uniform stretch instead of letterbox, and a patch bumps the HUD/menu font size for legibility; sprites still read small since the game renders at 1440x960 internally. Build-time fixes for an oversized title-screen texture (past the renderer's 4096px cap) and two BGM tracks with an undecodable multiplexed stream. All three kept as build-time transforms/patches rather than permanent commits on the pinned fork. See <code>packages/dungeonrush-mmiyoo/README.md</code>. <code>build_all: true</code>.</td></tr>
 </tbody>
 </table>
 
