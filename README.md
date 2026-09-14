@@ -1,17 +1,14 @@
 # mm-buildbot
 
-Build bot for producing packaged app distributions and standalone tool
-bundles from upstream source repos.
+Build bot for packaged app distributions and standalone tool bundles from
+upstream source repos. Owns build recipes, templates, and automation —
+not the upstream application source.
 
-This repo owns build recipes, templates, and automation. It does not own the
-upstream application source.
+Currently focused on SDL2-based source ports for the Miyoo Mini family
+(Mini, Plus, Mini Flip), using a custom SDL2 fork.
 
-As far as ports are concerned, it currently focuses on SDL2-based source
-ports for the Miyoo Mini family (Mini, Plus, Mini Flip) using my own version
-of SDL2.
-
-> **AI disclosure:** there's been a substantial usage of various LLM in this
-> project to both write the code & maintain the repo itself.
+> **AI disclosure:** substantial LLM usage writing code and maintaining
+> this repo.
 
 ## Layout
 
@@ -27,9 +24,13 @@ docs/                   Notes on package config and app-dist shape
 
 ## Packages
 
-The package matrix below is generated from committed manifests under
-`packages/`. It is refreshed by GitHub Actions whenever a package manifest or
-app icon is added or changed on `main`.
+Generated from committed manifests under `packages/`; refreshed by GitHub
+Actions whenever a manifest or app icon changes on `main`.
+
+`native run` = the package also declares a WSL2/Linux host build path.
+`modified source` = the recipe edits the upstream project's own source
+files (supplying build-system config, missing deps, or bundled runtime
+libraries doesn't count).
 
 <table>
 <colgroup>
@@ -44,60 +45,68 @@ app icon is added or changed on `main`.
 <tr><th></th><th>id</th><th>builds</th><th>native run</th><th>modified source</th><th>notes</th></tr>
 </thead>
 <tbody>
-<tr><td><img src="packages/sdl2-benchmarks-mmiyoo/templates/sdl_bench/icon.png" alt="SDL2 Benchmarks icon" width="32" height="32"></td><td><code>sdl2-benchmarks-mmiyoo</code></td><td>Miyoo SDL2 benchmark suite with 16 binaries covering SDL2 rendering, audio, OpenGL ES, SDL2_gfx, SDL2_image, and backend behaviour, built against the shared SDL providers.</td><td>—</td><td>no</td><td>Opt-in package (<code>build_all: false</code>) while the complete suite is clean-built and device-tested.</td></tr>
-<tr><td><img src="packages/retroarch-mmiyoo-sdl2-gl/templates/retroarch_sdl2/icon.png" alt="RetroArch icon" width="32" height="32"></td><td><code>retroarch-mmiyoo-sdl2-gl</code></td><td>Upstream RetroArch for Miyoo Mini, built against the shared <code>sdl2_miyoo</code> SDL2 backend (Ozone menu, OpenGL/OpenGLES, SDL audio/input/rumble).</td><td>—</td><td>yes</td><td>Patched for texture-load diagnostics/debug logging; links and bundles the single <code>sdl2-mmiyoo-lib</code> provider. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code> and <code>packages/retroarch-mmiyoo-sdl2-gl/README.md</code>.</td></tr>
-<tr><td><img src="packages/love-mmiyoo-demo/templates/LoveMiyoo/icon.png" alt="LÖVE icon" width="32" height="32"></td><td><code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 built against the shared <code>sdl2_miyoo</code> SDL2 backend, with a menu launcher over several test scenes.</td><td>yes</td><td>no</td><td>Supplies its own cross-compilation build system (<code>build_love.sh</code>/<code>cross.cmake</code>/<code>sdl2.m4</code>) and bundles the shared SDL2 libraries; LÖVE's own engine source is untouched. <strong>Early WIP</strong> — see <code>packages/love-mmiyoo-demo/STATUS.md</code> for known bugs. <code>build_all: true</code>.</td></tr>
-<tr><td><img src="packages/konpacto-mmiyoo/templates/Konpacto/icon.png" alt="Konpacto icon" width="32" height="32"></td><td><code>konpacto-mmiyoo</code></td><td>Konpacto FM Macro Tracker built against the shared <code>sdl2_miyoo</code> and <code>sdl2-mmiyoo-addons</code> providers.</td><td>yes</td><td>no</td><td>Bundles the shared SDL2 libraries and supplies LuaJIT plus the missing <code>tinydir.h</code> dependency as build inputs; Konpacto's own source is untouched. Native host build uses system SDL2, SDL2_image, and SDL2_mixer. <code>build_all: false</code>.</td></tr>
-<tr><td><img src="packages/yorisoft-pokedex/assets/icon.png" alt="Retrodex icon" width="32" height="32"></td><td><code>yorisoft-pokedex</code></td><td>Yorisoft's Retrodex Pokedex app, built against the shared <code>sdl2-mmiyoo-lib</code> and <code>sdl2-mmiyoo-addons</code> providers.</td><td>—</td><td>no</td><td>Bundles the shared SDL2/Image/TTF/Mixer libraries, supplies the pinned SQLite amalgamation as a build input, and tweaks <code>CMakeLists.txt</code> to link them; Retrodex's own app source is untouched. <code>build_all: false</code>.</td></tr>
-<tr><td><img src="packages/blobbyvolley2-mmiyoo/templates/BlobbyVolley2/icon.png" alt="Blobby Volley 2 icon" width="32" height="32"></td><td><code>blobbyvolley2-mmiyoo</code></td><td>Blobby Volley 2, built against the shared <code>sdl2-mmiyoo-lib</code> provider with PhysFS cross-built as a static library and Boost used header-only.</td><td>yes</td><td>no</td><td>See <code>packages/blobbyvolley2-mmiyoo/README.md</code>. <code>build_all: false</code>.</td></tr>
-<tr><td><img src="packages/vvvvvv-mmiyoo/assets/icon.png" alt="VVVVVV icon" width="32" height="32"></td><td><code>vvvvvv-mmiyoo</code></td><td>VVVVVV 2.3.6, built from upstream source against the shared <code>sdl2-mmiyoo-lib</code>/<code>sdl2-mmiyoo-addons</code> providers via the Union toolchain container.</td><td>yes</td><td>no</td><td>Port artifact type; builds with <code>sdl2_gles: no</code> (no GL/EGL/GLES symbols) and requests only <code>mixer</code> from the addons provider via <code>sdl2_addons:</code>. Retail <code>data.zip</code> is proprietary and not bundled. See <code>packages/vvvvvv-mmiyoo/README.md</code>. <code>build_all: false</code>.</td></tr>
+<tr><td><img src="packages/sdl2-benchmarks-mmiyoo/templates/sdl_bench/icon.png" alt="SDL2 Benchmarks icon" width="32" height="32"></td><td><code>sdl2-benchmarks-mmiyoo</code></td><td>16-binary SDL2 benchmark suite (render, audio, GLES, SDL2_gfx, SDL2_image, backend behavior).</td><td>—</td><td>no</td><td>Opt-in (<code>build_all: false</code>) pending a full clean-build + device test pass.</td></tr>
+<tr><td><img src="packages/retroarch-mmiyoo-sdl2-gl/templates/retroarch_sdl2/icon.png" alt="RetroArch icon" width="32" height="32"></td><td><code>retroarch-mmiyoo-sdl2-gl</code></td><td>RetroArch (Ozone menu, GL/GLES, SDL audio/input/rumble).</td><td>—</td><td>yes</td><td>Patched for texture-load debug logging. See <code>docs/retroarch-mmiyoo-sdl2-gl.md</code>.</td></tr>
+<tr><td><img src="packages/love-mmiyoo-demo/templates/LoveMiyoo/icon.png" alt="LÖVE icon" width="32" height="32"></td><td><code>love-mmiyoo-demo</code></td><td>LÖVE 11.5 + a menu launcher over several test scenes.</td><td>yes</td><td>no</td><td>Own cross-compile build system (<code>build_love.sh</code>/<code>cross.cmake</code>/<code>sdl2.m4</code>); engine source untouched. Early WIP, known bugs in <code>STATUS.md</code>. <code>build_all: true</code>.</td></tr>
+<tr><td><img src="packages/konpacto-mmiyoo/templates/Konpacto/icon.png" alt="Konpacto icon" width="32" height="32"></td><td><code>konpacto-mmiyoo</code></td><td>Konpacto FM Macro Tracker.</td><td>—</td><td>no</td><td>Supplies LuaJIT + <code>tinydir.h</code>; source untouched. Native host build uses system SDL2/Image/Mixer. <code>build_all: false</code>.</td></tr>
+<tr><td><img src="packages/yorisoft-pokedex/assets/icon.png" alt="Retrodex icon" width="32" height="32"></td><td><code>yorisoft-pokedex</code></td><td>Yorisoft's Retrodex Pokedex app.</td><td>—</td><td>no</td><td>Supplies the pinned SQLite amalgamation and tweaks <code>CMakeLists.txt</code> to link it; app source untouched. <code>build_all: false</code>.</td></tr>
+<tr><td><img src="packages/blobbyvolley2-mmiyoo/templates/BlobbyVolley2/icon.png" alt="Blobby Volley 2 icon" width="32" height="32"></td><td><code>blobbyvolley2-mmiyoo</code></td><td>Blobby Volley 2 (PhysFS static, Boost header-only).</td><td>yes</td><td>no</td><td>See <code>packages/blobbyvolley2-mmiyoo/README.md</code>. <code>build_all: false</code>.</td></tr>
+<tr><td><img src="packages/vvvvvv-mmiyoo/assets/icon.png" alt="VVVVVV icon" width="32" height="32"></td><td><code>vvvvvv-mmiyoo</code></td><td>VVVVVV 2.3.6.</td><td>yes</td><td>no</td><td>No GLES (<code>sdl2_gles: no</code>); only the <code>mixer</code> addon. Retail <code>data.zip</code> not bundled. <code>build_all: false</code>.</td></tr>
 </tbody>
 </table>
-
-`native run` indicates that the package declares a WSL2/Linux host build and
-run path using native system libraries. `modified source` indicates that the
-package recipe edits the upstream project's own source files (e.g. patching a
-`.c`/`.h`). Supplying build-system config, missing third-party build
-dependencies, or bundled runtime libraries doesn't count.
 
 ## Dev Packages
 
-`dev-tools/` holds standalone diagnostic tools and probes — device-hang
-repro cases, benchmarks, and utility bundles. Unlike `packages/`, these have
-no `package.yml`, clone no upstream source, and don't appear in the table
-above; each probe's C source is authored directly in this repo. Every probe
-has its own `compile.sh <out_dir>` (build only, no push).
-`dev-tools/probes-app/build.sh` compiles any set of probes into one
-directory and `package.sh` assembles them into a single on-device app
-(`config.json`/`icon.png`/`launch.sh`/`bin`/`lib`/`res`) — `launch.sh` runs
-whichever probe its `PROBE=` line names, so switching probes on-device is a
-one-line edit, not a re-push. Deploy any app-dist (probes or a real package)
-with `scripts/push-app.sh <local_dir> <device_app_name>`.
+`dev-tools/` holds standalone diagnostics and probes — no `package.yml`, no
+upstream clone, not part of the table above. Each has its own
+`compile.sh <out_dir>` (build only, no push). `dev-tools/probes-app/build.sh`
+compiles a chosen set into one directory and `package.sh` assembles them
+into an on-device app; `launch.sh`'s `PROBE=` line picks which one runs, so
+switching probes on-device is a one-line edit. Deploy any app-dist with
+`scripts/push-app.sh <local_dir> <device_app_name>`.
+
+### Probes (SDL2, `dev-tools/*-probe`)
+
+Unless noted, every probe logs to its own `probe.log` plus `launch.sh`'s
+timestamped run log, and ships via the `dev-tools/probes-app` on-device app.
 
 <table>
 <colgroup>
-<col width="220">
-<col>
 <col width="200">
-<col width="160">
-<col width="180">
+<col>
+<col width="260">
 </colgroup>
 <thead>
-<tr><th>tool</th><th>what it tests / does</th><th>logging</th><th>control</th><th>delivery</th></tr>
+<tr><th>tool</th><th>what it tests</th><th>control</th></tr>
 </thead>
 <tbody>
-<tr><td><code>downscale-bench-probe</code></td><td>Compares <code>MI_GFX_BitBlit</code>'s implicit hardware scale against the NEON <code>downscale_area_n32</code> fallback across a resolution matrix (800x600 through 1920x1080); each variant's result is rotated 180° and held on-screen with an on-screen banner naming resolution/target/variant.</td><td>Per-frame timing and a final summary table, both to the probe's own <code>probe.log</code> and to <code>launch.sh</code>'s <code>logs/&lt;probe&gt;-&lt;timestamp&gt;.log</code> capture.</td><td><code>PROBE=downscale-bench-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>frames_per_variant</code> (default 150).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>texture-count-probe</code></td><td>Repro for a hang theory tied to BlobbyVolley2's asset loading (many small <code>SDL_CreateTextureFromSurface</code> calls); <code>KEEP_ALIVE</code> toggles whether textures stay live or are destroyed between creates.</td><td>Checkpoint log to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=texture-count-probe</code> in <code>launch.sh</code>; <code>PROBE_ARGS</code> sets <code>KEEP_ALIVE</code> (<code>0</code>/<code>1</code>).</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>blend-compose-probe</code></td><td>Exercises the sdl2_miyoo composed-blend-mode translation added for MI_GFX: draws a representable composed mode (<code>SDL_ComposeCustomBlendMode(ONE, ZERO, ADD, ZERO, ONE, ADD)</code>) onto a render-target texture and checks the read-back pixel math, then draws a deliberately unrepresentable composed mode (mismatched color/alpha factors) and confirms the fallback path runs without crashing.</td><td>Per-case PASS/FAIL with expected-vs-actual pixel values to <code>probe.log</code>, plus captured <code>SDL_LOG_CATEGORY_RENDER</code> warning text via a custom <code>SDL_LogOutputFunction</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=blend-compose-probe</code> in <code>launch.sh</code>; no <code>PROBE_ARGS</code>.</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>pixel-format-probe</code></td><td>Writes a known translucent test color into a texture of each of <code>ARGB8888</code>, <code>ABGR8888</code>, <code>BGRA8888</code>, and <code>RGBA8888</code> (via each format's own <code>SDL_MapRGBA</code>), renders and reads it back, and decodes with <code>SDL_GetRGBA</code> -- a permanent reference for which pixel formats round-trip correctly on this driver (<code>RGBA8888</code> is expected to always <code>FAIL</code>, a documented hardware-format mismatch, not a bug).</td><td>Per-format PASS/FAIL with expected-vs-actual RGB to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=pixel-format-probe</code> in <code>launch.sh</code>; no <code>PROBE_ARGS</code>.</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>surface-alpha-probe</code></td><td>Builds an <code>ABGR8888</code> surface with a real per-pixel alpha gradient, converts it to <code>RGBA8888</code> via <code>SDL_ConvertSurfaceFormat</code>, and verifies alpha survives using only format-aware <code>SDL_GetRGBA</code> reads -- also logs what a naive fixed-byte-offset-3 alpha read of the destination would have produced, to make the RGBA8888 byte-order footgun self-evident from the log.</td><td>Per-pixel PASS/FAIL plus a summary count to <code>probe.log</code>, plus <code>launch.sh</code>'s timestamped run log.</td><td><code>PROBE=surface-alpha-probe</code> in <code>launch.sh</code>; no <code>PROBE_ARGS</code>.</td><td><code>dev-tools/probes-app</code> on-device app.</td></tr>
-<tr><td><code>i2c-tools-mmiyoo</code></td><td>Upstream <code>i2c-tools</code> 4.4 (<code>i2cdetect</code>, <code>i2cdump</code>, <code>i2cget</code>, <code>i2cset</code>, <code>i2ctransfer</code>) for direct I2C bus inspection.</td><td>stdout only, whatever the invoking command captures.</td><td>Invoked directly per-command over SSH.</td><td>Floating tool bundle, no <code>launch.sh</code>/app-dist shape — copy <code>bin/</code> to the device.</td></tr>
-<tr><td><code>strace-mmiyoo</code></td><td>Union-toolchain ARM hard-float build of <code>strace</code> 6.12, for live syscall tracing during a device-hang investigation.</td><td>stdout, or wherever the invoking command redirects it.</td><td>Invoked directly over SSH, typically wrapping another process's launch.</td><td>Floating binary, dynamically linked against the device C library, no private shared-library deps.</td></tr>
-<tr><td><code>tcpdump-mmiyoo</code></td><td><code>tcpdump</code> 4.99.6 with its private <code>libpcap.so.1</code> dependency, for capturing on-device network traffic.</td><td>stdout or a <code>.pcap</code> file, whichever <code>tcpdump</code>'s own arguments target.</td><td>Invoked directly over SSH.</td><td>Floating bundle using an <code>$ORIGIN/../lib</code> runtime search path — copy <code>bin/</code> and <code>lib/</code> together.</td></tr>
-<tr><td><code>sdl2-mmiyoo-lib</code></td><td>Shared SDL2 library bundle (<code>libSDL2-2.0.so.0</code>, <code>libEGL.so</code>, <code>libGLESv2.so</code>, <code>libneonarmmiyoo.so</code> + headers), cloned and built from <code>sdl2_miyoo</code> via a single <code>docker run</code> against the shared Union toolchain image, invoking <code>mk_miyoo.sh --enable-gles --clean build</code> directly (no nested Docker).</td><td>—</td><td>Not invoked directly — built on demand via <code>depends_on</code> whenever a consumer package needs it.</td><td>Not a standalone deliverable; consumed only as <code>MMIYOO_SDL2_PREFIX</code> by dependent packages' <code>build.sh</code>. <code>build_all: false</code>.</td></tr>
-<tr><td><code>sdl2-mmiyoo-addons</code></td><td>SDL2_image, SDL2_ttf, SDL2_gfx, SDL2_mixer, and SDL2_net, built via <code>scripts/mksdl2.sh</code> in <code>SDL2_SKIP_CORE=1</code> mode against the <code>sdl2-mmiyoo-lib</code> provider. A consumer's <code>sdl2_addons:</code> list selects which components get built (default: all).</td><td>—</td><td>Not invoked directly — built on demand via <code>depends_on</code> whenever a consumer package needs it.</td><td>Not a standalone deliverable; consumed only as <code>MMIYOO_SDL2_ADDONS_PREFIX</code> by dependent packages' <code>build.sh</code>. <code>build_all: false</code>.</td></tr>
+<tr><td><code>downscale-bench-probe</code></td><td>Hardware <code>MI_GFX_BitBlit</code> scale vs. NEON <code>downscale_area_n32</code>, 800x600 through 1920x1080.</td><td><code>PROBE=downscale-bench-probe</code>; <code>PROBE_ARGS</code> = <code>frames_per_variant</code> (default 150).</td></tr>
+<tr><td><code>texture-count-probe</code></td><td>BlobbyVolley2 hang repro: many small <code>SDL_CreateTextureFromSurface</code> calls.</td><td><code>PROBE=texture-count-probe</code>; <code>PROBE_ARGS</code> = <code>KEEP_ALIVE</code> (0/1).</td></tr>
+<tr><td><code>blend-compose-probe</code></td><td>Composed/premultiplied blend-mode translation, fill-blend correctness, and small-vs-large fill agreement (6 cases).</td><td><code>PROBE=blend-compose-probe</code>.</td></tr>
+<tr><td><code>pixel-format-probe</code></td><td>Round-trip of <code>ARGB8888</code>/<code>ABGR8888</code>/<code>BGRA8888</code>/<code>RGBA8888</code> (<code>RGBA8888</code> fails by design — documented hardware limitation).</td><td><code>PROBE=pixel-format-probe</code>.</td></tr>
+<tr><td><code>surface-alpha-probe</code></td><td>Per-pixel alpha survives an <code>ABGR8888</code> → <code>RGBA8888</code> conversion.</td><td><code>PROBE=surface-alpha-probe</code>.</td></tr>
+<tr><td><code>colorkey-probe</code></td><td><code>SDL_MMIYOO_SetTextureColorKey</code> on <code>RGB565</code> and <code>ARGB8888</code> textures.</td><td><code>PROBE=colorkey-probe</code>.</td></tr>
+<tr><td><code>blend-fill-bench-probe</code></td><td>Hardware-blit vs. scalar-C vs. NEON alpha-blend fill timing across a pixel-count matrix.</td><td><code>PROBE=blend-fill-bench-probe</code>; <code>PROBE_ARGS</code> = <code>frames_per_variant</code> (default 500).</td></tr>
 </tbody>
 </table>
+
+### Standalone tools
+
+- `i2c-tools-mmiyoo` — `i2cdetect`/`i2cdump`/`i2cget`/`i2cset`/`i2ctransfer`
+  for I2C bus inspection. No `launch.sh`/app-dist shape — copy `bin/`.
+- `strace-mmiyoo` — `strace` 6.12 for live syscall tracing. Floating
+  binary, no private shared-library deps.
+- `tcpdump-mmiyoo` — `tcpdump` 4.99.6 + its private `libpcap.so.1`. Copy
+  `bin/` and `lib/` together (`$ORIGIN/../lib` search path).
+
+### Providers (not standalone deliverables)
+
+- `sdl2-mmiyoo-lib` — shared SDL2 bundle (`libSDL2`, `libEGL`, `libGLESv2`,
+  `libneonarmmiyoo` + headers), built from `sdl2_miyoo`. Built on demand,
+  consumed via `MMIYOO_SDL2_PREFIX`. `build_all: false`.
+- `sdl2-mmiyoo-addons` — SDL2_image/ttf/gfx/mixer/net via `mksdl2.sh`.
+  Built on demand, consumed via `MMIYOO_SDL2_ADDONS_PREFIX`.
+  `build_all: false`.
 
 ## Basic Flow
 
@@ -133,19 +142,19 @@ Build every package and create `dist/all-artifacts.zip` (with
 scripts/build-all.sh
 ```
 
-The source-port recipes are deliberately excluded from `build-all` until each
-one has been directly built and smoke-tested against the published MMIYOO SDL2
-provider. Build one explicitly with `scripts/build-package.sh <id>`.
+Source-port recipes stay excluded from `build-all` until each is directly
+built and smoke-tested against the published SDL2 provider — build one
+explicitly with `scripts/build-package.sh <id>`.
 
-`build-all` creates one dependency-build session and builds
-`sdl2-mmiyoo-lib` first when an enabled package consumes it. That provider is
-then reused for all SDL consumers in the session; it is not rebuilt per app.
+`build-all` opens one dependency-build session and builds `sdl2-mmiyoo-lib`
+first when an enabled package needs it, then reuses that build for every
+consumer in the session rather than rebuilding it per app.
 
 ### WSL2 native host builds
 
-Host builds compile selected packages with the WSL2-native compiler and the
-system SDL2 installation. They do not use the Miyoo ARM toolchain,
-`sdl2-mmiyoo-lib`, Docker, or app-distribution packaging.
+Host builds compile selected packages with the WSL2-native compiler and
+system SDL2 — no Miyoo ARM toolchain, `sdl2-mmiyoo-lib`, Docker, or
+app-distribution packaging.
 
 The first host-enabled package is Blobby Volley 2:
 
@@ -153,8 +162,7 @@ The first host-enabled package is Blobby Volley 2:
 scripts/build-host.sh blobbyvolley2-mmiyoo
 ```
 
-Use `HOST_SOURCE_DIR` to build an editable local checkout while keeping the
-build directory separate from the source tree:
+Build an editable local checkout (build dir stays separate from source):
 
 ```sh
 HOST_SOURCE_DIR=/path/to/blobbyvolley2 \
@@ -168,19 +176,17 @@ HOST_SOURCE_DIR=/path/to/blobbyvolley2 \
   scripts/run-host.sh blobbyvolley2-mmiyoo
 ```
 
-The run helper supplies an isolated `HOME` under the host build directory by
-default. Override it with `HOST_HOME` when persistent native settings are
-needed.
+The runner supplies an isolated `HOME` under the host build directory by
+default — override with `HOST_HOME` for persistent native settings.
 
-Host output is kept under `work/host/<package>/`. The runner checks native
-requirements with `pkg-config`, fails without installing packages, and does
-not create release archives. Host build metadata is optional and lives in the
+Host output lives under `work/host/<package>/`. The runner checks native
+requirements with `pkg-config`, fails without installing packages, and
+creates no release archives. Host build metadata is optional, under the
 package manifest's `host:` section.
 
-For a reproducible native environment, use the supplied `x86-mm-buildbot`
-container. It includes the compiler, Autotools, system SDL2, and the native
-audio/video development libraries. The repository is mounted into the
-container, so build output remains under the normal `work/host/` directory:
+For a reproducible native environment, use the `x86-mm-buildbot` container
+(compiler, Autotools, system SDL2, native audio/video dev libs). The repo
+is mounted in, so build output still lands under `work/host/`:
 
 ```sh
 scripts/build-host-docker.sh build love-mmiyoo-demo
@@ -188,18 +194,17 @@ scripts/build-host-docker.sh run love-mmiyoo-demo
 scripts/build-host-docker.sh shell
 ```
 
-The `run` command forwards the WSLg/X11 video socket and WSLg PulseAudio
-socket when available. The image name can be overridden with
-`MM_X86_BUILDBOT_IMAGE`.
+`run` forwards the WSLg/X11 video socket and WSLg PulseAudio socket when
+available. Override the image with `MM_X86_BUILDBOT_IMAGE`.
 
 ### SDL provider
 
-The SDL provider is cloned from `sdl2-mmiyoo-lib`'s `package.yml`
-`source.repo`/`ref` (currently `XK9274/sdl2_miyoo` at `main`) and built via
-`mk_miyoo.sh`, giving every consumer the same known core, EGL/GLES, Neon
-helper, and development headers. `main` can lag behind work still local to
-whichever machine last touched `sdl2_miyoo` -- push before relying on this
-for anything tested against the latest driver fixes.
+Cloned from `sdl2-mmiyoo-lib`'s `package.yml` (`source.repo`/`ref`,
+currently `XK9274/sdl2_miyoo` at `main`) and built via `mk_miyoo.sh`, so
+every consumer shares the same core, EGL/GLES, Neon helper, and headers.
+`main` can lag behind work still local to whichever machine last touched
+`sdl2_miyoo` — push before relying on it for anything tested against the
+latest driver fixes.
 
 Override the source explicitly when required:
 
@@ -209,18 +214,18 @@ SDL2_MIYOO_REF=your-branch \
 scripts/build-all.sh
 ```
 
-For iterating on an uncommitted `sdl2_miyoo` working-tree change, set
-`SDL2_MIYOO_LOCAL_REPO=/path/to/sdl2_miyoo` instead -- it copies the
-working-tree bytes directly (`cp -a`), no commit or push required, and takes
-priority over `SDL2_MIYOO_REPO`/`SDL2_MIYOO_REF` when set.
+For an uncommitted `sdl2_miyoo` working-tree change, set
+`SDL2_MIYOO_LOCAL_REPO=/path/to/sdl2_miyoo` instead — copies working-tree
+bytes directly (`cp -a`), no commit/push needed, takes priority over
+`SDL2_MIYOO_REPO`/`SDL2_MIYOO_REF`.
 
-`build-all` builds the currently enabled recipes only. Disabled source-port
-recipes remain individually opt-in until their upstream package layouts have
-been verified.
+`build-all` builds only the currently enabled recipes; disabled
+source-port recipes stay individually opt-in until their upstream package
+layouts are verified.
 
 ## Local GitHub Actions Testing
 
-This repo is structured to work with `act` once you install it locally.
+This repo works with `act` once installed locally:
 
 ```sh
 act workflow_dispatch -W .github/workflows/build-app.yml \
