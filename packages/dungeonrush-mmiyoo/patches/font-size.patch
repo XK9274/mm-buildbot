@@ -1,0 +1,13 @@
+diff --git a/src/res.h b/src/res.h
+index 20b73f8..83e1ea1 100644
+--- a/src/res.h
++++ b/src/res.h
+@@ -13,7 +13,7 @@
+ #define UNIT 32
+ #define SCREEN_WIDTH 1440
+ #define SCREEN_HEIGHT 960
+-#define FONT_SIZE 32
++#define FONT_SIZE 40
+ // Resource ID
+ // Map Resource
+ #define RES_WALL_TOP_LEFT 0
