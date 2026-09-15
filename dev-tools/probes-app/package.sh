@@ -48,8 +48,7 @@ needs_neon_only=0
 needs_freetype=0
 for name in "${built[@]}"; do
   case "$name" in
-    downscale-bench-probe|fill-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
-    memcpy-bench-probe) needs_neon_only=1 ;;
+    downscale-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
     *) needs_sdl2=1 ;;
   esac
 done
