@@ -72,6 +72,7 @@ docker run --rm \
   -e HOST_GID="$(id -g)" \
   -e DEBUG="${DEBUG:-0}" \
   -e TITLE_GIT_VERSION="${TITLE_GIT_VERSION:-}" \
+  -e NPROC="${NPROC:-$(nproc)}" \
   --workdir /workspace/src/miyoo_sdl2_benchmarks \
   -v "$work_dir":/workspace \
   -v "$MMIYOO_SDL2_PREFIX":/opt/mmiyoo-sdl2:ro \
@@ -90,9 +91,9 @@ docker run --rm \
     cd /workspace/src/miyoo_sdl2_benchmarks
     make clean
     if [[ -n "$TITLE_GIT_VERSION" ]]; then
-      make DEBUG="$DEBUG" TITLE_GIT_VERSION="$TITLE_GIT_VERSION"
+      make -j"$NPROC" DEBUG="$DEBUG" TITLE_GIT_VERSION="$TITLE_GIT_VERSION"
     else
-      make DEBUG="$DEBUG"
+      make -j"$NPROC" DEBUG="$DEBUG"
     fi
   '
 
