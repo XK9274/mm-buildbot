@@ -90,9 +90,17 @@ while IFS= read -r dependency; do
       gles_mode_file="$BUILDBOT_SESSION_DIR/sdl2-mmiyoo-lib.gles-mode"
       previous_gles_mode=""
       [[ -f "$gles_mode_file" ]] && previous_gles_mode="$(cat "$gles_mode_file")"
-      if [[ ! -f "$dependency_marker" || "$requested_gles_mode" != "$previous_gles_mode" ]]; then
+      # Keyed on SDL2_MIYOO_DEBUG too, so a session that builds a stripped
+      # driver and then a debug driver (or vice versa) rebuilds instead of
+      # silently reusing the other mode's stale bundle.
+      requested_debug_mode="${SDL2_MIYOO_DEBUG:-0}"
+      debug_mode_file="$BUILDBOT_SESSION_DIR/sdl2-mmiyoo-lib.debug-mode"
+      previous_debug_mode=""
+      [[ -f "$debug_mode_file" ]] && previous_debug_mode="$(cat "$debug_mode_file")"
+      if [[ ! -f "$dependency_marker" || "$requested_gles_mode" != "$previous_gles_mode" || "$requested_debug_mode" != "$previous_debug_mode" ]]; then
         rm -f "$dependency_marker"
         printf '%s' "$requested_gles_mode" >"$gles_mode_file"
+        printf '%s' "$requested_debug_mode" >"$debug_mode_file"
         if [[ "$requested_gles_mode" == "nogl" ]]; then
           export SDL2_MIYOO_ENABLE_GLES=0
         fi
