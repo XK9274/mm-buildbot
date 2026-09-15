@@ -142,14 +142,22 @@ ensure_derived_toolchain_image() {
   printf '%s\n' "$image"
 }
 
-mmiyoo_toolchain_readelf() {
+# One container for every candidate file under root, not a container per
+# file. Emits "target<TAB>needed" pairs; target paths are under /work/root.
+mmiyoo_toolchain_readelf_batch() {
   local image="${1:?toolchain image required}"
-  local target="${2:?target required}"
-  shift 2
+  local root="${2:?distribution root required}"
+
   docker run --rm --user "$(id -u):$(id -g)" \
-    -v "$target":/work/input:ro \
-    "$image" \
-    /opt/miyoomini-toolchain/usr/bin/arm-linux-gnueabihf-readelf "$@" /work/input
+    -v "$root":/work/root:ro \
+    "$image" bash -s <<'EOF'
+set -euo pipefail
+while IFS= read -r -d '' target; do
+  while IFS= read -r needed; do
+    printf '%s\t%s\n' "$target" "$needed"
+  done < <(/opt/miyoomini-toolchain/usr/bin/arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
+done < <(find /work/root -type f \( -perm -0100 -o -name '*.so*' \) -print0)
+EOF
 }
 
 # With a toolchain_image, readelf runs inside that Docker image (no host
@@ -164,12 +172,21 @@ verify_mmiyoo_runtime_closure() {
       printf 'Missing required tool: docker\n' >&2
       return 1
     }
-  else
-    command -v arm-linux-gnueabihf-readelf >/dev/null 2>&1 || {
-      printf 'Missing required tool: arm-linux-gnueabihf-readelf\n' >&2
-      return 1
-    }
+
+    while IFS=$'\t' read -r target needed; do
+      is_mmiyoo_platform_library "$needed" && continue
+      if ! find "$root" -name "$needed" -print -quit | grep -q .; then
+        printf 'Missing bundled runtime dependency for %s: %s\n' "${target#/work/root/}" "$needed" >&2
+        return 1
+      fi
+    done < <(mmiyoo_toolchain_readelf_batch "$toolchain_image" "$root")
+    return 0
   fi
+
+  command -v arm-linux-gnueabihf-readelf >/dev/null 2>&1 || {
+    printf 'Missing required tool: arm-linux-gnueabihf-readelf\n' >&2
+    return 1
+  }
 
   while IFS= read -r -d '' target; do
     while IFS= read -r needed; do
@@ -178,12 +195,6 @@ verify_mmiyoo_runtime_closure() {
         printf 'Missing bundled runtime dependency for %s: %s\n' "$target" "$needed" >&2
         return 1
       fi
-    done < <(
-      if [[ -n "$toolchain_image" ]]; then
-        mmiyoo_toolchain_readelf "$toolchain_image" "$target" -d 2>/dev/null
-      else
-        arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null
-      fi | awk -F'[][]' '/Shared library:/ { print $2 }'
-    )
+    done < <(arm-linux-gnueabihf-readelf -d "$target" 2>/dev/null | awk -F'[][]' '/Shared library:/ { print $2 }')
   done < <(find "$root" -type f \( -perm -0100 -o -name '*.so*' \) -print0)
 }
