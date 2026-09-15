@@ -58,37 +58,14 @@ libraries doesn't count).
 ## Dev Packages
 
 `dev-tools/` holds standalone diagnostics and probes — no `package.yml`, no
-upstream clone, not part of the table above. Each has its own
-`compile.sh <out_dir>` (build only, no push). `dev-tools/probes-app/build.sh`
-compiles a chosen set into one directory and `package.sh` assembles them
-into an on-device app; `launch.sh`'s `PROBE=` line picks which one runs, so
-switching probes on-device is a one-line edit. Deploy any app-dist with
-`scripts/push-app.sh <local_dir> <device_app_name>`.
-
-### Probes (SDL2, `dev-tools/*-probe`)
-
-Unless noted, every probe logs to its own `probe.log` plus `launch.sh`'s
-timestamped run log, and ships via the `dev-tools/probes-app` on-device app.
-
-<table>
-<colgroup>
-<col width="200">
-<col>
-<col width="260">
-</colgroup>
-<thead>
-<tr><th>tool</th><th>what it tests</th><th>control</th></tr>
-</thead>
-<tbody>
-<tr><td><code>downscale-bench-probe</code></td><td>Hardware <code>MI_GFX_BitBlit</code> scale vs. NEON <code>downscale_area_n32</code>, 800x600 through 1920x1080.</td><td><code>PROBE=downscale-bench-probe</code>; <code>PROBE_ARGS</code> = <code>frames_per_variant</code> (default 150).</td></tr>
-<tr><td><code>texture-count-probe</code></td><td>BlobbyVolley2 hang repro: many small <code>SDL_CreateTextureFromSurface</code> calls.</td><td><code>PROBE=texture-count-probe</code>; <code>PROBE_ARGS</code> = <code>KEEP_ALIVE</code> (0/1).</td></tr>
-<tr><td><code>blend-compose-probe</code></td><td>Composed/premultiplied blend-mode translation, fill-blend correctness, and small-vs-large fill agreement (6 cases).</td><td><code>PROBE=blend-compose-probe</code>.</td></tr>
-<tr><td><code>pixel-format-probe</code></td><td>Round-trip of <code>ARGB8888</code>/<code>ABGR8888</code>/<code>BGRA8888</code>/<code>RGBA8888</code> (<code>RGBA8888</code> fails by design — documented hardware limitation).</td><td><code>PROBE=pixel-format-probe</code>.</td></tr>
-<tr><td><code>surface-alpha-probe</code></td><td>Per-pixel alpha survives an <code>ABGR8888</code> → <code>RGBA8888</code> conversion.</td><td><code>PROBE=surface-alpha-probe</code>.</td></tr>
-<tr><td><code>colorkey-probe</code></td><td><code>SDL_MMIYOO_SetTextureColorKey</code> on <code>RGB565</code> and <code>ARGB8888</code> textures.</td><td><code>PROBE=colorkey-probe</code>.</td></tr>
-<tr><td><code>blend-fill-bench-probe</code></td><td>Hardware-blit vs. scalar-C vs. NEON alpha-blend fill timing across a pixel-count matrix.</td><td><code>PROBE=blend-fill-bench-probe</code>; <code>PROBE_ARGS</code> = <code>frames_per_variant</code> (default 500).</td></tr>
-</tbody>
-</table>
+upstream clone, not part of the table above. Probes themselves
+(`dev-tools/*-probe/`) are gitignored and not enumerated here: they're
+created locally as needed and change too often to keep documented in sync.
+Each has its own `compile.sh <out_dir>` (build only, no push).
+`dev-tools/probes-app/build.sh` compiles a chosen set into one directory and
+`package.sh` assembles them into an on-device app; `launch.sh`'s `PROBE=`
+line picks which one runs, so switching probes on-device is a one-line edit.
+Deploy any app-dist with `scripts/push-app.sh <local_dir> <device_app_name>`.
 
 ### Standalone tools
 

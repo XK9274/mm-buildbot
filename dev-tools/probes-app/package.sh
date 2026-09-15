@@ -48,7 +48,6 @@ needs_neon_only=0
 needs_freetype=0
 for name in "${built[@]}"; do
   case "$name" in
-    downscale-bench-probe) needs_neon_only=1; needs_freetype=1 ;;
     *) needs_sdl2=1 ;;
   esac
 done
@@ -86,7 +85,7 @@ EOF
   printf '#!/bin/sh\nset -eu\n\n'
   printf '# Edit this line to switch which probe runs. Built into this app: %s\n' "${built[*]}"
   printf 'PROBE="%s"\n' "$default_probe"
-  printf '# Args passed to the probe, e.g. for downscale-bench-probe: frames_per_variant\n'
+  printf '# Args passed to the probe -- see its own compile.sh/probe.c for what it accepts\n'
   printf 'PROBE_ARGS=""\n\n'
   printf 'app_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
   printf 'cd "$app_dir/res" 2>/dev/null || cd "$app_dir"\n'

@@ -8,6 +8,9 @@ work/*
 # Local GitHub Actions runner state
 .act/
 
+# Probes are recreated locally as needed, not tracked
+dev-tools/*-probe/
+
 # Local env/secrets
 .env
 .env.*
