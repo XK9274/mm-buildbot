@@ -118,7 +118,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ needs.preflight.outputs.target_sha }}"
 
       - name: Install packaging tools
-        run: sudo apt-get update && sudo apt-get install -y zip python3-pil
+        run: sudo apt-get update && sudo apt-get install -y zip python3-pil ffmpeg
 
       - name: Build Union toolchain image
         uses: ./.github/actions/build-toolchain-image
