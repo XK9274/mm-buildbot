@@ -38,9 +38,18 @@ require_command docker
   exit 1
 }
 
-if [[ "${MM_X86_BUILDBOT_REBUILD:-0}" == 1 ]] || ! docker image inspect "$image" >/dev/null 2>&1; then
+# Content-hash stamped: the Dockerfile has no COPY/ADD, so hashing it alone
+# fully captures the build's content. MM_X86_BUILDBOT_REBUILD=1 stays as an
+# explicit override on top of the hash check.
+stamp_file="$root/work/.toolchain-cache/x86-mm-buildbot.stamp"
+mkdir -p "$(dirname "$stamp_file")"
+current_hash="$(sha256sum "$dockerfile" | awk '{print $1}')"
+if [[ "${MM_X86_BUILDBOT_REBUILD:-0}" == 1 ]] \
+  || ! docker image inspect "$image" >/dev/null 2>&1 \
+  || [[ "$(cat "$stamp_file" 2>/dev/null)" != "$image:$current_hash" ]]; then
   printf 'Building Docker image: %s\n' "$image"
   docker build -f "$dockerfile" -t "$image" "$root"
+  printf '%s:%s' "$image" "$current_hash" >"$stamp_file"
 fi
 
 docker_args=(
