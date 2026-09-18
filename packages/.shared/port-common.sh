@@ -62,22 +62,60 @@ is_mmiyoo_platform_library() {
   esac
 }
 
+# Acquires an flock on work/.locks/image-<tag>.lock around the command
+# passed after the tag, releasing it when that command returns. Host-side
+# only -- never called from inside a docker run.
+with_image_lock() {
+  local image="${1:?image tag required}"
+  local lock_dir="${repo_root:-.}/work/.locks"
+  local lock_file="$lock_dir/image-$(printf '%s' "$image" | tr -c 'A-Za-z0-9._-' '_').lock"
+  local lock_fd
+
+  command -v flock >/dev/null 2>&1 || {
+    printf 'Missing required tool: flock\n' >&2
+    return 1
+  }
+  mkdir -p "$lock_dir"
+  exec {lock_fd}>"$lock_file"
+  flock "$lock_fd"
+
+  shift
+  "$@"
+  local status=$?
+
+  flock -u "$lock_fd"
+  exec {lock_fd}>&-
+  return "$status"
+}
+
 # Clones/refreshes repo_url into repo_dir and builds image from its
 # Dockerfile, skipping the build only when image already exists locally and
 # repo_dir's HEAD SHA matches the SHA recorded from the last successful
 # build (stamped in repo_dir/.mm-buildbot-build-stamp).
+#
+# Runs under an image-tag lock: callers sharing a tag block on one build
+# instead of racing the shared checkout and the image build itself.
 ensure_toolchain_image() {
+  local name="${1:?toolchain name required}"
+  local repo_url="${2:?toolchain repo url required}"
+  local repo_dir="${3:?toolchain checkout dir required}"
+  local image="${4:?toolchain image tag required}"
+
+  command -v docker >/dev/null 2>&1 || {
+    printf 'Missing required tool: docker\n' >&2
+    return 1
+  }
+
+  with_image_lock "$image" _ensure_toolchain_image_locked "$name" "$repo_url" "$repo_dir" "$image"
+}
+
+_ensure_toolchain_image_locked() {
   local name="${1:?toolchain name required}"
   local repo_url="${2:?toolchain repo url required}"
   local repo_dir="${3:?toolchain checkout dir required}"
   local image="${4:?toolchain image tag required}"
   local stamp_file="$repo_dir/.mm-buildbot-build-stamp"
   local current_sha
-
-  command -v docker >/dev/null 2>&1 || {
-    printf 'Missing required tool: docker\n' >&2
-    return 1
-  }
 
   if [[ ! -d "$repo_dir/.git" ]]; then
     printf 'Cloning %s toolchain from %s\n' "$name" "$repo_url" >&2
@@ -116,7 +154,6 @@ ensure_derived_toolchain_image() {
   local context_dir="${4:?build context dir required}"
   local image="${5:?derived image tag required}"
   local stamp_file="${6:?stamp file required}"
-  local current_hash
 
   command -v docker >/dev/null 2>&1 || {
     printf 'Missing required tool: docker\n' >&2
@@ -126,6 +163,18 @@ ensure_derived_toolchain_image() {
     printf 'Missing %s Dockerfile: %s\n' "$name" "$dockerfile" >&2
     return 1
   }
+
+  with_image_lock "$image" _ensure_derived_toolchain_image_locked "$name" "$base_image" "$dockerfile" "$context_dir" "$image" "$stamp_file"
+}
+
+_ensure_derived_toolchain_image_locked() {
+  local name="${1:?derived image name required}"
+  local base_image="${2:?base image required}"
+  local dockerfile="${3:?dockerfile required}"
+  local context_dir="${4:?build context dir required}"
+  local image="${5:?derived image tag required}"
+  local stamp_file="${6:?stamp file required}"
+  local current_hash
 
   mkdir -p "$(dirname "$stamp_file")"
   current_hash="$(sha256sum "$dockerfile" | awk '{print $1}')"
