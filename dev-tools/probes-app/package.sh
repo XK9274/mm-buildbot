@@ -90,6 +90,8 @@ EOF
   printf 'app_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
   printf 'cd "$app_dir/res" 2>/dev/null || cd "$app_dir"\n'
   printf 'export LD_LIBRARY_PATH="$app_dir/lib:/config/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"\n\n'
+  printf 'cpuclock="/mnt/SDCARD/.tmp_update/bin/cpuclock"\n'
+  printf '[ -f "$cpuclock" ] && "$cpuclock" 1700\n\n'
   printf 'mkdir -p "$app_dir/logs"\n'
   printf 'run_log="$app_dir/logs/${PROBE}-$(date +%%Y%%m%%d-%%H%%M%%S).log"\n'
   printf 'set +e\n'
