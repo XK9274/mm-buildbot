@@ -38,6 +38,16 @@ if [[ "$dependency_stack" == *":$package_id:"* ]]; then
 fi
 export BUILDBOT_PACKAGE_STACK="${BUILDBOT_PACKAGE_STACK:+$BUILDBOT_PACKAGE_STACK:}$package_id"
 
+# Serializes every build of this package_id so concurrent siblings needing
+# the same dependency block instead of racing. Held until process exit.
+acquire_lock "$root" "$package_id" package_lock_fd
+
+package_complete_marker="$BUILDBOT_SESSION_DIR/$package_id.complete"
+if [[ -f "$package_complete_marker" ]]; then
+  printf 'Already built this session: %s\n' "$package_id"
+  exit 0
+fi
+
 while IFS= read -r dependency; do
   [[ -n "$dependency" ]] || continue
   dependency_prefix=""
@@ -182,6 +192,6 @@ if [[ "$artifact_type" == "app_dist" ]] && (( ${#tokens[@]} > 0 )); then
 fi
 
 create_zip_from_dir "$stage_dir" "$artifact"
-touch "$BUILDBOT_SESSION_DIR/$package_id.complete"
+touch "$package_complete_marker"
 
 printf 'Created artifact: %s\n' "$artifact"

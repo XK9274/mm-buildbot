@@ -63,6 +63,25 @@ package_dependencies() {
   yaml_list "$1" "depends_on"
 }
 
+# Acquires an flock on work/.locks/<name>.lock into caller's $fd_var and
+# holds it until the caller's process exits. Host-side only: never call
+# this from inside a docker run.
+acquire_lock() {
+  local root="${1:?repo root required}"
+  local name="${2:?lock name required}"
+  local fd_var="${3:?fd variable name required}"
+  local lock_dir="$root/work/.locks"
+  local lock_file="$lock_dir/$name.lock"
+
+  command -v flock >/dev/null 2>&1 || {
+    printf 'Missing required tool: flock\n' >&2
+    return 1
+  }
+  mkdir -p "$lock_dir"
+  eval "exec {$fd_var}>\"\$lock_file\""
+  flock "${!fd_var}"
+}
+
 create_zip_from_dir() {
   local source_dir="$1"
   local artifact="$2"
